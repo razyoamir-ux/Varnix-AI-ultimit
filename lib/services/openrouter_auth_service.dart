@@ -8,23 +8,23 @@ import 'package:url_launcher/url_launcher.dart';
 class OpenRouterAuthService {
   OpenRouterAuthService._();
   static const _storage = FlutterSecureStorage();
-  static const _apiKeyName = 'openrouter_user_api_key';
-  static const _verifierName = 'openrouter_oauth_code_verifier';
+  static String _apiKeyName(String userId) => 'openrouter_user_api_key_$userId';
+  static String _verifierName(String userId) => 'openrouter_oauth_code_verifier_$userId';
   static const callbackUrl = 'com.varnix.ai://login-callback';
 
-  static Future<bool> get isConnected async =>
-      (await _storage.read(key: _apiKeyName))?.isNotEmpty ?? false;
+  static Future<bool> isConnected(String userId) async =>
+      (await _storage.read(key: _apiKeyName(userId)))?.isNotEmpty ?? false;
 
-  static Future<String?> readApiKey() => _storage.read(key: _apiKeyName);
+  static Future<String?> readApiKey(String userId) => _storage.read(key: _apiKeyName(userId));
 
-  static Future<void> beginAuthorization() async {
+  static Future<void> beginAuthorization(String userId) async {
     final random = Random.secure();
     final bytes = List<int>.generate(32, (_) => random.nextInt(256));
     final verifier = base64Url.encode(bytes).replaceAll('=', '');
     final challenge = base64Url
         .encode(sha256.convert(utf8.encode(verifier)).bytes)
         .replaceAll('=', '');
-    await _storage.write(key: _verifierName, value: verifier);
+    await _storage.write(key: _verifierName(userId), value: verifier);
 
     final url = Uri.https('openrouter.ai', '/auth', {
       'callback_url': callbackUrl,
@@ -33,19 +33,19 @@ class OpenRouterAuthService {
     });
     final opened = await launchUrl(url, mode: LaunchMode.externalApplication);
     if (!opened) {
-      await _storage.delete(key: _verifierName);
+      await _storage.delete(key: _verifierName(userId));
       throw Exception('باز کردن صفحه امن OpenRouter ممکن نشد.');
     }
   }
 
-  static Future<bool> handleCallback(Uri uri) async {
+  static Future<bool> handleCallback(Uri uri, String userId) async {
     if (uri.scheme != 'com.varnix.ai' || uri.host != 'login-callback') return false;
     final code = uri.queryParameters['code'];
     if (code == null || code.isEmpty) {
       throw Exception(uri.queryParameters['error_description'] ??
           uri.queryParameters['error'] ?? 'اتصال OpenRouter لغو شد.');
     }
-    final verifier = await _storage.read(key: _verifierName);
+    final verifier = await _storage.read(key: _verifierName(userId));
     if (verifier == null || verifier.isEmpty) {
       throw Exception('درخواست اتصال معتبر نیست؛ دوباره تلاش کن.');
     }
@@ -67,12 +67,12 @@ class OpenRouterAuthService {
     if (key is! String || !key.startsWith('sk-or-')) {
       throw Exception('OpenRouter کلید معتبر برنگرداند.');
     }
-    await _storage.write(key: _apiKeyName, value: key);
+    await _storage.write(key: _apiKeyName(userId), value: key);
     return true;
   }
 
-  static Future<void> disconnect() async {
-    await _storage.delete(key: _apiKeyName);
-    await _storage.delete(key: _verifierName);
+  static Future<void> disconnect(String userId) async {
+    await _storage.delete(key: _apiKeyName(userId));
+    await _storage.delete(key: _verifierName(userId));
   }
 }
