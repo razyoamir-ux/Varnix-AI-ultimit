@@ -38,10 +38,10 @@ class BackendService {
     return Map<String, dynamic>.from(data);
   }
 
-  static Future<String> sendChat({required List<Map<String, String>> messages, String? assistantId, String? userInstructions}) async {
+  static Future<String> sendChat({required List<Map<String, String>> messages, String? assistantId, String? userInstructions, bool supportMode = false}) async {
     final response = await client.functions.invoke('chat', body: {
       'messages': messages,
-      if (assistantId != null) 'assistant_id': assistantId,
+      if (assistantId != null) 'assistant_id': assistantId,\n      if (supportMode) 'support_mode': true,
       if (userInstructions != null && userInstructions.trim().isNotEmpty) 'user_instructions': userInstructions.trim(),
     });
     final data = response.data;
