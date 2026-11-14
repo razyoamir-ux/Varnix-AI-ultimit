@@ -63,10 +63,10 @@ serve(async (req) => {
       .maybeSingle();
     if (previousError) return json({ error: "Could not load previous key metadata" }, 503);
 
-    const configuredLimit = Number(Deno.env.get("OPENROUTER_USER_KEY_LIMIT_USD") ?? "5");
+    const configuredLimit = Number(Deno.env.get("OPENROUTER_USER_KEY_LIMIT_USD") ?? "1");
     const limitUsd = Number.isFinite(configuredLimit) && configuredLimit > 0
-      ? Math.min(configuredLimit, 100)
-      : 5;
+      ? Math.min(configuredLimit, 10)
+      : 1;
 
     const createResponse = await fetch("https://openrouter.ai/api/v1/keys", {
       method: "POST",
@@ -77,6 +77,7 @@ serve(async (req) => {
       body: JSON.stringify({
         name: "Varnix user " + user.id.slice(0, 8),
         limit: limitUsd,
+        limit_reset: "daily",
       }),
       signal: AbortSignal.timeout(20_000),
     });
