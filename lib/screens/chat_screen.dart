@@ -6,6 +6,7 @@ import '../widgets/message_bubble.dart';
 import '../widgets/typing_indicator.dart';
 import 'owner_panel_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ChatScreen extends StatefulWidget {
   final String? initialPrompt;
@@ -32,17 +33,65 @@ class _ChatScreenState extends State<ChatScreen> {
   String _rubikaUrl = '';
   String _myketUrl = '';
   String _planCode = 'free';
+  String _userInstructions = '';
   String? _planExpiresAt;
   RealtimeChannel? _configChannel;
 
   @override
   void initState() {
     super.initState();
+    _loadUserInstructions();
     _loadConversation().then((_) {
       if (widget.initialPrompt != null && mounted) {
         _controller.text = widget.initialPrompt!;
       }
     });
+  }
+
+  Future<void> _loadUserInstructions() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
+    setState(() => _userInstructions = prefs.getString('varnix_ai_user_instructions') ?? '');
+  }
+
+  Future<void> _showInstructionsEditor() async {
+    final controller = TextEditingController(text: _userInstructions);
+    final shouldSave = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('شخصی‌سازی هوش مصنوعی'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('به وارنیکس بگو دوست داری چطور پاسخ بدهد؛ مثلاً لحن، میزان جزئیات یا زبان پاسخ. این تنظیم فقط برای حساب و دستگاه فعلی ذخیره می‌شود.'),
+              const SizedBox(height: 12),
+              TextField(
+                controller: controller,
+                maxLines: 7,
+                maxLength: 2000,
+                decoration: const InputDecoration(
+                  hintText: 'مثلاً: پاسخ‌ها را کوتاه، دوستانه و به زبان فارسی بنویس.',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('انصراف')),
+          FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('ذخیره')),
+        ],
+      ),
+    );
+    if (shouldSave == true) {
+      final value = controller.text.trim();
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('varnix_ai_user_instructions', value);
+      if (mounted) setState(() => _userInstructions = value);
+    }
+    controller.dispose();
   }
 
   Future<void> _loadConversation() async {
@@ -201,7 +250,7 @@ class _ChatScreenState extends State<ChatScreen> {
       final history = _messages
           .map((m) => <String, String>{'role': m.role, 'content': m.content})
           .toList();
-      final answer = await BackendService.sendChat(messages: history, assistantId: _selectedAssistantId);
+      final answer = await BackendService.sendChat(messages: history, assistantId: _selectedAssistantId, userInstructions: _userInstructions);
       final saved = await BackendService.client.from('messages').insert({
         'conversation_id': conversationId,
         'user_id': user.id,
@@ -251,6 +300,7 @@ class _ChatScreenState extends State<ChatScreen> {
       final answer = await BackendService.sendChat(
         messages: history,
         assistantId: _selectedAssistantId,
+        userInstructions: _userInstructions,
       );
       await BackendService.client
           .from('messages')
@@ -444,6 +494,7 @@ class _ChatScreenState extends State<ChatScreen> {
               icon: const Icon(Icons.add_comment_outlined)),
             PopupMenuButton<String>(
               onSelected: (value) {
+                if (value == 'instructions') _showInstructionsEditor();
                 if (value == 'logout') _signOut();
                 if (value == 'email') _showAccount(email);
                 if (value == 'plan') _showPlan();
@@ -460,6 +511,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   const PopupMenuItem(value: 'admin', child: Text('پنل مدیریت')),
                 const PopupMenuItem(value: 'email', child: Text('حساب کاربری')),
                 const PopupMenuItem(value: 'plan', child: Text('اشتراک وارنیکس')),
+                const PopupMenuItem(value: 'instructions', child: Text('شخصی‌سازی هوش مصنوعی')),
                 const PopupMenuItem(value: 'myket', child: Text('امتیاز به وارنیکس در مایکت')),
                 if (_rubikaUrl.isNotEmpty)
                   const PopupMenuItem(value: 'rubika', child: Text('کانال روبیکا')),
