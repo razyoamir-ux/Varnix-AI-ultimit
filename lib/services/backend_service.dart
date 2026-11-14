@@ -20,8 +20,11 @@ class BackendService {
     return row?['role'] == 'admin';
   }
 
-  static Future<String> sendChat({required List<Map<String, String>> messages}) async {
-    final response = await client.functions.invoke('chat', body: {'messages': messages});
+  static Future<String> sendChat({required List<Map<String, String>> messages, String? assistantId}) async {
+    final response = await client.functions.invoke('chat', body: {
+      'messages': messages,
+      if (assistantId != null) 'assistant_id': assistantId,
+    });
     final data = response.data;
     if (response.status < 200 || response.status >= 300) {
       final message = data is Map && data['error'] != null
