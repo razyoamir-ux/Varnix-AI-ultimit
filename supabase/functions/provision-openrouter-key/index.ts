@@ -46,6 +46,15 @@ serve(async (req) => {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 
+  let reservationHeld = false;
+  const releaseReservation = async () => {
+    if (!reservationHeld) return;
+    await service.from("openrouter_user_keys")
+      .update({ last_issued_at: null })
+      .eq("user_id", user.id);
+    reservationHeld = false;
+  };
+
   try {
     const { data: reserved, error: reserveError } = await service.rpc(
       "reserve_openrouter_key_issue",
@@ -55,13 +64,17 @@ serve(async (req) => {
     if (reserved !== true) {
       return json({ error: "برای جلوگیری از ساخت کلیدهای متعدد، هر ۲۴ ساعت فقط یک‌بار می‌توان کلید جدید ساخت." }, 429);
     }
+    reservationHeld = true;
 
     const { data: previous, error: previousError } = await service
       .from("openrouter_user_keys")
       .select("key_hash")
       .eq("user_id", user.id)
       .maybeSingle();
-    if (previousError) return json({ error: "Could not load previous key metadata" }, 503);
+    if (previousError) {
+      await releaseReservation();
+      return json({ error: "Could not load previous key metadata" }, 503);
+    }
 
     const configuredLimit = Number(Deno.env.get("OPENROUTER_USER_KEY_LIMIT_USD") ?? "1");
     const limitUsd = Number.isFinite(configuredLimit) && configuredLimit > 0
@@ -84,6 +97,7 @@ serve(async (req) => {
 
     const createBody = await createResponse.json().catch(() => null);
     if (!createResponse.ok) {
+      await releaseReservation();
       return json({
         error: createResponse.status === 401 || createResponse.status === 403
           ? "کلید مدیریتی OpenRouter معتبر نیست یا مجوز ساخت کلید ندارد."
@@ -96,6 +110,7 @@ serve(async (req) => {
     const keyHash = created?.hash;
     if (typeof userApiKey !== "string" || !userApiKey.startsWith("sk-or-") ||
         typeof keyHash !== "string" || keyHash.length < 8) {
+      await releaseReservation();
       return json({ error: "OpenRouter پاسخ قابل‌انتظاری برای ساخت کلید نداد." }, 502);
     }
 
@@ -113,6 +128,7 @@ serve(async (req) => {
         method: "DELETE",
         headers: { "Authorization": "Bearer " + managementKey },
       }).catch(() => undefined);
+      await releaseReservation();
       return json({ error: "کلید ساخته شد اما ذخیره امن اطلاعات آن ناموفق بود؛ دوباره تلاش کنید." }, 503);
     }
 
@@ -127,6 +143,7 @@ serve(async (req) => {
     // The plaintext key is returned exactly once and is never persisted by Varnix.
     return json({ key: userApiKey, limit_usd: limitUsd, one_time: true });
   } catch (error) {
+    await releaseReservation();
     if (error instanceof DOMException && error.name === "TimeoutError") {
       return json({ error: "ارتباط با OpenRouter بیش از حد طول کشید؛ دوباره تلاش کنید." }, 504);
     }
