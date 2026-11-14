@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter/services.dart';
 import 'dart:async';
 import 'package:app_links/app_links.dart';
@@ -177,6 +180,28 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
   bool compact = false;
   bool keyLoading = false;
   bool openRouterConnected = false;
+  String providerId = 'openrouter';
+  String providerModel = 'openrouter/free';
+  String providerKey = '';
+  List<String> availableModels = [];
+  bool modelsLoading = false;
+  final TextEditingController _providerKeyController = TextEditingController();
+  final TextEditingController _manualModelController = TextEditingController();
+  static const Map<String, Map<String, String>> _providers = {
+    'openrouter': {'name': 'OpenRouter', 'url': 'https://openrouter.ai/api/v1'},
+    'groq': {'name': 'Groq', 'url': 'https://api.groq.com/openai/v1'},
+    'gemini': {'name': 'Google Gemini', 'url': 'https://generativelanguage.googleapis.com/v1beta/openai'},
+    'mistral': {'name': 'Mistral AI', 'url': 'https://api.mistral.ai/v1'},
+    'deepseek': {'name': 'DeepSeek', 'url': 'https://api.deepseek.com/v1'},
+    'together': {'name': 'Together AI', 'url': 'https://api.together.xyz/v1'},
+    'fireworks': {'name': 'Fireworks AI', 'url': 'https://api.fireworks.ai/inference/v1'},
+    'cerebras': {'name': 'Cerebras', 'url': 'https://api.cerebras.ai/v1'},
+    'deepinfra': {'name': 'DeepInfra', 'url': 'https://api.deepinfra.com/v1/openai'},
+    'cohere': {'name': 'Cohere', 'url': 'https://api.cohere.ai/compatibility/v1'},
+    'novita': {'name': 'Novita AI', 'url': 'https://api.novita.ai/openai/v1'},
+    'nvidia': {'name': 'NVIDIA NIM', 'url': 'https://integrate.api.nvidia.com/v1'},
+    'xai': {'name': 'xAI (Grok)', 'url': 'https://api.x.ai/v1'},
+  };
   StreamSubscription<Uri>? _linkSubscription;
   final AppLinks _appLinks = AppLinks();
 
@@ -184,8 +209,130 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
   void initState() {
     super.initState();
     _read();
+    _loadProviderPrefs();
     _loadOpenRouterStatus();
     _listenForOpenRouterCallback();
+  }
+
+  Future<void> _loadProviderPrefs() async {
+    final prefs = await SharedPreferences.getInstance();
+    final userId = BackendService.currentUser!.id;
+    final selected = prefs.getString('varnix_provider_id') ?? 'openrouter';
+    const secure = FlutterSecureStorage();
+    final key = await secure.read(key: selected == 'openrouter'
+        ? 'openrouter_user_api_key_$userId'
+        : 'varnix_provider_api_key_${userId}_$selected');
+    if (!mounted) return;
+    setState(() {
+      providerId = _providers.containsKey(selected) ? selected : 'openrouter';
+      providerModel = prefs.getString('varnix_provider_model') ?? 'openrouter/free';
+      providerKey = key ?? '';
+      _providerKeyController.text = providerKey;
+      _manualModelController.text = providerModel;
+    });
+  }
+
+  Future<void> _changeProvider(String? value) async {
+    if (value == null || !_providers.containsKey(value)) return;
+    final prefs = await SharedPreferences.getInstance();
+    const secure = FlutterSecureStorage();
+    final userId = BackendService.currentUser!.id;
+    final key = await secure.read(key: value == 'openrouter'
+        ? 'openrouter_user_api_key_$userId'
+        : 'varnix_provider_api_key_${userId}_$value');
+    setState(() {
+      providerId = value;
+      providerKey = key ?? '';
+      _providerKeyController.text = providerKey;
+      availableModels = [];
+      providerModel = value == 'openrouter' ? 'openrouter/free' : '';
+      _manualModelController.text = providerModel;
+    });
+    await prefs.setString('varnix_provider_id', value);
+    await prefs.setString('varnix_provider_model', providerModel);
+  }
+
+  Future<void> _fetchProviderModels() async {
+    final info = _providers[providerId]!;
+    final key = _providerKeyController.text.trim();
+    if (providerId != 'openrouter' && key.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('اول کلید API این سرویس را وارد کن.')),
+      );
+      return;
+    }
+    setState(() => modelsLoading = true);
+    try {
+      final response = await http.get(
+        Uri.parse('${info['url']}/models'),
+        headers: {
+          'Accept': 'application/json',
+          if (key.isNotEmpty) 'Authorization': 'Bearer $key',
+        },
+      ).timeout(const Duration(seconds: 30));
+      if (response.statusCode != 200) {
+        throw Exception('دریافت مدل‌ها ناموفق بود: ${response.statusCode}');
+      }
+      final data = jsonDecode(response.body);
+      final raw = data is Map ? data['data'] : null;
+      final ids = raw is List
+          ? raw.whereType<Map>().map((item) => item['id']?.toString() ?? '')
+              .where((id) => id.isNotEmpty).toSet().toList()..sort()
+          : <String>[];
+      if (ids.isEmpty) throw Exception('این سرویس فهرست مدل قابل‌خواندن برنگرداند؛ شناسه مدل را دستی وارد کن.');
+      if (!mounted) return;
+      setState(() {
+        availableModels = ids;
+        if (!ids.contains(providerModel)) providerModel = ids.first;
+        _manualModelController.text = providerModel;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('${ids.length} مدل دریافت شد.')),
+      );
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+      );
+    } finally {
+      if (mounted) setState(() => modelsLoading = false);
+    }
+  }
+
+  Future<void> _saveProviderSettings() async {
+    final prefs = await SharedPreferences.getInstance();
+    const secure = FlutterSecureStorage();
+    final userId = BackendService.currentUser!.id;
+    final key = _providerKeyController.text.trim();
+    providerModel = availableModels.isNotEmpty
+        ? providerModel
+        : _manualModelController.text.trim();
+    if (providerModel.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('ابتدا یک مدل انتخاب یا شناسه آن را وارد کن.')),
+      );
+      return;
+    }
+    if (providerId != 'openrouter' && key.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('کلید API این سرویس را وارد کن.')),
+      );
+      return;
+    }
+    if (key.isNotEmpty) {
+      await secure.write(
+        key: providerId == 'openrouter'
+            ? 'openrouter_user_api_key_$userId'
+            : 'varnix_provider_api_key_${userId}_$providerId',
+        value: key,
+      );
+    }
+    await prefs.setString('varnix_provider_id', providerId);
+    await prefs.setString('varnix_provider_model', providerModel);
+    if (!mounted) return;
+    setState(() => providerKey = key);
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('سرویس و مدل هوش مصنوعی ذخیره شد.')),
+    );
   }
 
   Future<void> _loadOpenRouterStatus() async {
@@ -244,6 +391,8 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
   @override
   void dispose() {
     _linkSubscription?.cancel();
+    _providerKeyController.dispose();
+    _manualModelController.dispose();
     super.dispose();
   }
 
@@ -295,6 +444,77 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
                     label: const Text('قطع اتصال'),
                   ),
               ]),
+            ],
+          ),
+        ),
+      ),
+      const SizedBox(height: 18),
+      Card(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('انتخاب سرویس و مدل هوش مصنوعی',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17)),
+              const SizedBox(height: 8),
+              const Text('از سرویس‌های مختلف استفاده کن. مدل‌ها مستقیماً از فهرست API همان سرویس دریافت می‌شوند؛ کلیدها فقط در حافظه امن همین گوشی ذخیره می‌شوند.'),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                value: providerId,
+                isExpanded: true,
+                decoration: const InputDecoration(labelText: 'ارائه‌دهنده API'),
+                items: _providers.entries.map((entry) => DropdownMenuItem(
+                  value: entry.key, child: Text(entry.value['name']!),
+                )).toList(),
+                onChanged: _changeProvider,
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: _providerKeyController,
+                obscureText: true,
+                decoration: InputDecoration(
+                  labelText: 'کلید API شخصی',
+                  hintText: providerId == 'openrouter' ? 'برای OpenRouter اختیاری؛ اتصال OAuth هم قابل استفاده است' : 'کلید API را از سایت رسمی سرویس بگیر',
+                ),
+                onChanged: (value) => providerKey = value,
+              ),
+              const SizedBox(height: 10),
+              OutlinedButton.icon(
+                onPressed: modelsLoading ? null : _fetchProviderModels,
+                icon: modelsLoading
+                    ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                    : const Icon(Icons.refresh),
+                label: Text(modelsLoading ? 'در حال دریافت مدل‌ها...' : 'دریافت فهرست مدل‌ها'),
+              ),
+              if (availableModels.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                DropdownButtonFormField<String>(
+                  value: availableModels.contains(providerModel) ? providerModel : availableModels.first,
+                  isExpanded: true,
+                  decoration: const InputDecoration(labelText: 'مدل قابل استفاده'),
+                  items: availableModels.map((id) => DropdownMenuItem(
+                    value: id, child: Text(id, overflow: TextOverflow.ellipsis),
+                  )).toList(),
+                  onChanged: (value) => setState(() => providerModel = value ?? ''),
+                ),
+              ] else ...[
+                const SizedBox(height: 8),
+                TextField(
+                  controller: _manualModelController,
+                  decoration: const InputDecoration(labelText: 'شناسه مدل (در صورت نیاز دستی وارد کن)'),
+                  onChanged: (value) => providerModel = value,
+                ),
+              ],
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  onPressed: _saveProviderSettings,
+                  icon: const Icon(Icons.save),
+                  label: const Text('ذخیره سرویس و مدل'),
+                ),
+              ),
             ],
           ),
         ),
