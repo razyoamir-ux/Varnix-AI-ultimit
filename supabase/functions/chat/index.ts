@@ -56,7 +56,7 @@ serve(async (req) => {
       gemini: { baseUrl: "https://generativelanguage.googleapis.com/v1beta/openai" },
       mistral: { baseUrl: "https://api.mistral.ai/v1" },
       deepseek: { baseUrl: "https://api.deepseek.com/v1" },
-      together: { baseUrl: "https://api.together.xyz/v1" },
+      together: { baseUrl: "https://api.together.ai/v1" },
       fireworks: { baseUrl: "https://api.fireworks.ai/inference/v1" },
       cerebras: { baseUrl: "https://api.cerebras.ai/v1" },
       deepinfra: { baseUrl: "https://api.deepinfra.com/v1/openai" },
