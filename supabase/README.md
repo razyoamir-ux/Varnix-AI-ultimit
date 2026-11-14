@@ -21,3 +21,21 @@ The mobile app will use the project's public URL and anon key (these are client 
 - Authenticated AI proxy so provider credentials are not shipped in the APK
 
 Payment activation must be performed by a trusted server-side payment verification flow. A client must never be allowed to mark its own purchase as paid.
+
+
+## Connect the current Flutter app
+1. In Supabase, open **Project Settings → API** and copy the **Project URL** and the **anon/public key**.
+2. In GitHub, open this repository's **Settings → Secrets and variables → Actions**.
+3. Add two repository secrets with these exact names:
+   - `SUPABASE_URL` — your Supabase Project URL.
+   - `SUPABASE_ANON_KEY` — your Supabase anon/public key.
+4. Open **Actions → Build Varnix AI APK** and run the workflow, or push a commit to `varnix-v3-foundation`.
+5. Download the generated `varnix-ai-apk` artifact from the completed workflow run.
+
+The current app build reads those values through Dart compile-time defines. If the secrets are not configured, the APK deliberately shows a setup-required screen instead of pretending the cloud service is connected.
+
+## Auth and owner setup
+- In Supabase **Authentication → URL Configuration**, set the site URL and allowed redirect URLs for your app's password recovery flow.
+- Configure the email provider and decide whether email confirmation is required.
+- Register your own account in the app first. Then, in the Supabase SQL Editor, run an update setting only that account's `profiles.role` to `admin`.
+- Never put the OpenRouter API key or Supabase service-role key in GitHub repository files, Flutter build arguments, or chat messages. Add only `OPENROUTER_API_KEY` to the Supabase Edge Function secrets.
