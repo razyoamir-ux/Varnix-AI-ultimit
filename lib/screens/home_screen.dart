@@ -338,8 +338,8 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
       final data = jsonDecode(response.body);
       final raw = data is Map ? data['data'] : null;
       final ids = raw is List
-          ? raw.whereType<Map>().map((item) => item['id']?.toString() ?? '')
-              .where((id) => id.isNotEmpty).toSet().toList()..sort()
+          ? (raw.whereType<Map>().map((item) => item['id']?.toString() ?? '')
+              .where((id) => id.isNotEmpty).toSet().toList()..sort())
           : <String>[];
       if (ids.isEmpty) throw Exception('این سرویس فهرست مدل قابل‌خواندن برنگرداند؛ شناسه مدل را دستی وارد کن.');
       if (!mounted) return;
