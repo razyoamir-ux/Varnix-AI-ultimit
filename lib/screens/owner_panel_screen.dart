@@ -493,12 +493,10 @@ class _OwnerPanelScreenState extends State<OwnerPanelScreen> {
                           trailing: PopupMenuButton<String>(
                             onSelected: (value) => _applyUserAction(user, value),
                             itemBuilder: (_) => const [
-                              PopupMenuItem(value: 'pro', child: Text('فعال‌سازی پلن پرو')),
-                              PopupMenuItem(value: 'pro_max', child: Text('فعال‌سازی پلن پرو مکس')),
-                              PopupMenuItem(value: 'ultra_max', child: Text('فعال‌سازی پلن اولترا مکس')),
-                              PopupMenuItem(value: 'free', child: Text('بازگشت به پلن رایگان')),
-                              PopupMenuItem(value: 'admin', child: Text('اعطای دسترسی مدیر')),
-                              PopupMenuItem(value: 'user', child: Text('حذف دسترسی مدیر')),
+                              PopupMenuItem(value: 'pro', child: Text('فعال‌سازی نسخه حرفه‌ای')),
+                              PopupMenuItem(value: 'free', child: Text('بازگشت به نسخه رایگان')),
+                              PopupMenuItem(value: 'admin', child: Text('اعطای دسترسی مالک')),
+                              PopupMenuItem(value: 'user', child: Text('حذف دسترسی مالک')),
                             ],
                           ),
                         ),
