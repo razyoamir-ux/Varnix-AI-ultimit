@@ -107,9 +107,6 @@ serve(async (req) => {
     if (configError) return json({ error: "Could not load app configuration" }, 503);
 
     let model = config?.default_model ?? "openrouter/free";
-    if (typeof payload.model === "string" && payload.model.trim().length > 0 && payload.model.length <= 160) {
-      model = payload.model.trim();
-    }
     let systemPrompt = config?.system_prompt ?? "تو یک دستیار هوشمند فارسی‌زبان به نام وارنیکس هستی.";
     if (typeof payload.assistant_id === "string" && payload.assistant_id.length <= 80) {
       const { data: assistant, error: assistantError } = await supabase
@@ -137,6 +134,10 @@ serve(async (req) => {
 هرگز وجود قابلیت، اتصال، پرداخت، انتشار، امنیت کامل یا موفقیت عملیاتی را حدس نزن. اگر وضعیت یک قابلیت یا خطا را نمی‌دانی، صادقانه بگو و برای تشخیص، متن کامل خطا یا تصویر صفحه را درخواست کن. برای حل مشکل، ابتدا ساده‌ترین بررسی بی‌خطر را پیشنهاد بده و از کاربر رمز عبور، توکن، کلید API یا اطلاعات محرمانه نخواه.
 به موضوعات نامرتبط با پشتیبانی وارنیکس وارد نشو؛ در صورت نیاز مؤدبانه توضیح بده که این بخش مخصوص راهنمای خود برنامه است. قابلیت‌های آموزشی، درس، آزمون یا آکادمی را به‌عنوان امکانات وارنیکس معرفی نکن.`;
     }
+    if (typeof payload.model === "string" && payload.model.trim().length > 0 && payload.model.length <= 160) {
+      model = payload.model.trim();
+    }
+
     const userInstructions = payload.user_instructions ?? "";
     if (typeof userInstructions !== "string" || userInstructions.length > 2_000) {
       return json({ error: "User instructions are invalid or too long" }, 400);
