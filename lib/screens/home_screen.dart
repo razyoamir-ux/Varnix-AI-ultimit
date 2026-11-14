@@ -122,7 +122,7 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
       final result = await BackendService.createOpenRouterUserKey();
       if (!mounted) return;
       final apiKey = result['key'] as String;
-      final limit = result['limit_usd']?.toString() ?? '5';
+      final limit = result['limit_usd']?.toString() ?? '1';
       await showDialog<void>(
         context: context,
         barrierDismissible: false,
@@ -137,7 +137,7 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
                 const SizedBox(height: 14),
                 SelectableText(apiKey, textDirection: TextDirection.ltr),
                 const SizedBox(height: 12),
-                Text('سقف مصرف این کلید: $limit دلار'),
+                Text('سقف مصرف روزانه این کلید: $limit دلار'),
               ],
             ),
           ),
