@@ -165,7 +165,7 @@ class _OwnerPanelScreenState extends State<OwnerPanelScreen> {
   Future<void> _applyUserAction(Map<String, dynamic> user, String action) async {
     try {
       final params = <String, dynamic>{'target_user_id': user['id']};
-      if (['pro', 'pro_max', 'ultra_max'].contains(action)) {
+      if (action == 'pro') {
         final days = int.tryParse(_duration.text.trim()) ?? 30;
         params['new_plan_code'] = action;
         params['new_plan_expires_at'] = DateTime.now()
@@ -178,6 +178,7 @@ class _OwnerPanelScreenState extends State<OwnerPanelScreen> {
         params['new_role'] = 'admin';
       } else if (action == 'user') {
         params['new_role'] = 'user';
+        params['new_plan_code'] = 'free';
       }
       await BackendService.client.rpc('admin_update_profile', params: params);
       await _loadUsers();
