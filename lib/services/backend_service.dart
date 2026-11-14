@@ -41,7 +41,8 @@ class BackendService {
 
   static Future<String> sendChat({required List<Map<String, String>> messages, String? assistantId, String? userInstructions, bool supportMode = false}) async {
     const secureStorage = FlutterSecureStorage();
-    final personalKey = await secureStorage.read(key: 'openrouter_user_api_key');
+    final userId = currentUser?.id;
+    final personalKey = userId == null ? null : await secureStorage.read(key: 'openrouter_user_api_key_$userId');
     final response = await client.functions.invoke('chat', body: {
       'messages': messages,
       if (personalKey != null && personalKey.isNotEmpty) 'openrouter_api_key': personalKey,
