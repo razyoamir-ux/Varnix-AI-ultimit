@@ -193,7 +193,7 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
     'gemini': {'name': 'Google Gemini', 'url': 'https://generativelanguage.googleapis.com/v1beta/openai'},
     'mistral': {'name': 'Mistral AI', 'url': 'https://api.mistral.ai/v1'},
     'deepseek': {'name': 'DeepSeek', 'url': 'https://api.deepseek.com/v1'},
-    'together': {'name': 'Together AI', 'url': 'https://api.together.xyz/v1'},
+    'together': {'name': 'Together AI', 'url': 'https://api.together.ai/v1'},
     'fireworks': {'name': 'Fireworks AI', 'url': 'https://api.fireworks.ai/inference/v1'},
     'cerebras': {'name': 'Cerebras', 'url': 'https://api.cerebras.ai/v1'},
     'deepinfra': {'name': 'DeepInfra', 'url': 'https://api.deepinfra.com/v1/openai'},
