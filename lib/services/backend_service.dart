@@ -20,6 +20,24 @@ class BackendService {
     return row?['role'] == 'admin';
   }
 
+  static Future<Map<String, dynamic>> createOpenRouterUserKey() async {
+    final response = await client.functions.invoke(
+      'provision-openrouter-key',
+      body: <String, dynamic>{},
+    );
+    final data = response.data;
+    if (response.status < 200 || response.status >= 300) {
+      final message = data is Map && data['error'] != null
+          ? data['error'].toString()
+          : 'ساخت کلید OpenRouter ناموفق بود (${response.status})';
+      throw Exception(message);
+    }
+    if (data is! Map || data['key'] is! String) {
+      throw Exception('پاسخ ساخت کلید معتبر نیست.');
+    }
+    return Map<String, dynamic>.from(data);
+  }
+
   static Future<String> sendChat({required List<Map<String, String>> messages, String? assistantId, String? userInstructions}) async {
     final response = await client.functions.invoke('chat', body: {
       'messages': messages,
