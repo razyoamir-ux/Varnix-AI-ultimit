@@ -20,6 +20,7 @@ class _OwnerPanelScreenState extends State<OwnerPanelScreen> {
   bool _loading = true;
   bool _saving = false;
   bool _allowed = false;
+  bool _paymentEnabled = false;
   List<Map<String, dynamic>> _assistants = [];
   List<Map<String, dynamic>> _users = [];
   List<Map<String, dynamic>> _purchases = [];
@@ -107,6 +108,7 @@ class _OwnerPanelScreenState extends State<OwnerPanelScreen> {
       _price.text = config['pro_price']?.toString() ?? '';
       _duration.text = (config['pro_duration_days'] ?? 30).toString();
       _announcement.text = config['announcement']?.toString() ?? '';
+      _paymentEnabled = config['payment_enabled'] == true;
       await _loadAssistants();
       await _loadUsers();
       await _loadPurchases();
@@ -280,6 +282,8 @@ class _OwnerPanelScreenState extends State<OwnerPanelScreen> {
         'pro_price': _price.text.trim(),
         'pro_duration_days': days,
         'announcement': _announcement.text.trim(),
+        'payment_provider': 'nextpay',
+        'payment_enabled': _paymentEnabled,
         'updated_at': DateTime.now().toUtc().toIso8601String(),
       }).eq('id', true);
       if (mounted) {
@@ -343,6 +347,12 @@ class _OwnerPanelScreenState extends State<OwnerPanelScreen> {
                       const SizedBox(height: 14),
                       _field('قیمت پلن', _price),
                       _field('مدت پلن (روز)', _duration, keyboard: TextInputType.number),
+                      SwitchListTile(
+                        value: _paymentEnabled,
+                        onChanged: (value) => setState(() => _paymentEnabled = value),
+                        title: const Text('فعال‌سازی پرداخت نکست‌پی'),
+                        subtitle: const Text('فقط پس از ثبت کلید محرمانه نکست‌پی در تنظیمات سرور فعالش کن.'),
+                      ),
                       _field('اعلان عمومی برای کاربران', _announcement, lines: 3),
                       const Divider(height: 30),
                       Row(
