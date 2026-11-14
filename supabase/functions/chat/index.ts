@@ -28,8 +28,20 @@ serve(async (req) => {
     if (!messages.length || messages.length > 40) return Response.json({ error: "Invalid messages" }, { status: 400, headers: cors });
 
     const { data: config } = await supabase.from("app_config").select("default_model,api_base_url,system_prompt").eq("id", true).maybeSingle();
-    const model = typeof payload.model === "string" && payload.model.length < 160
-      ? payload.model : (config?.default_model ?? "openrouter/free");
+    let model = config?.default_model ?? "openrouter/free";
+    let systemPrompt = config?.system_prompt ?? "You are Varnix AI. Reply in Persian when appropriate.";
+    if (typeof payload.assistant_id === "string" && payload.assistant_id.length < 80) {
+      const { data: assistant } = await supabase
+        .from("assistants")
+        .select("system_prompt,model,is_active")
+        .eq("id", payload.assistant_id)
+        .maybeSingle();
+      if (!assistant || !assistant.is_active) {
+        return Response.json({ error: "Assistant not found or inactive" }, { status: 404, headers: cors });
+      }
+      model = assistant.model;
+      systemPrompt = assistant.system_prompt;
+    }
     const safeMessages = messages
       .filter((m: any) => m && ["user", "assistant"].includes(m.role) && typeof m.content === "string")
       .map((m: any) => ({ role: m.role, content: m.content.slice(0, 16000) }));
@@ -41,7 +53,7 @@ serve(async (req) => {
       headers: { "Authorization": "Bearer " + openRouterKey, "Content-Type": "application/json", "X-Title": "Varnix AI" },
       body: JSON.stringify({
         model,
-        messages: [{ role: "system", content: config?.system_prompt ?? "You are Varnix AI. Reply in Persian when appropriate." }, ...safeMessages],
+        messages: [{ role: "system", content: systemPrompt }, ...safeMessages],
         temperature: 0.7,
         max_tokens: 2048,
       }),
