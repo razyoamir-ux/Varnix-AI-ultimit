@@ -34,7 +34,7 @@ class _HomeScreenState extends State<HomeScreen> {
         final c = await BackendService.loadAppConfig();
         admin = await BackendService.isCurrentUserAdmin();
         displayName = p?['display_name']?.toString() ?? '';
-        plan = p?['plan_code']?.toString() ?? 'free';
+        plan = admin ? 'owner' : (p?['plan_code']?.toString() ?? 'free');
         announcement = c['announcement']?.toString() ?? '';
         proPrice = c['pro_price']?.toString() ?? '';
         paymentEnabled = c['payment_enabled'] == true;
