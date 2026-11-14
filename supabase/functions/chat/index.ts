@@ -129,6 +129,17 @@ serve(async (req) => {
       return json({ error: "AI configuration is invalid" }, 503);
     }
 
+    const { data: quota, error: quotaError } = await supabase.rpc("consume_ai_quota");
+    if (quotaError || !quota || typeof quota !== "object") {
+      return json({ error: "سهمیه حساب بررسی نشد؛ لطفاً کمی بعد دوباره تلاش کن." }, 503);
+    }
+    if (quota.allowed !== true) {
+      return json({
+        error: `سهمیه روزانه پلن شما تکمیل شده است (${quota.used}/${quota.daily_limit}). سهمیه در شروع روز UTC بعدی بازنشانی می‌شود.`,
+        quota,
+      }, 429);
+    }
+
     const baseUrl = new URL(config?.api_base_url ?? "https://openrouter.ai/api/v1");
     // This release supports OpenRouter only. Restrict the host to prevent
     // admin misconfiguration from turning this proxy into an arbitrary fetcher.
@@ -148,7 +159,7 @@ serve(async (req) => {
         model,
         messages: [{ role: "system", content: systemPrompt }, ...safeMessages],
         temperature: 0.7,
-        max_tokens: 2048,
+        max_tokens: Math.min(Number(quota.max_output_tokens) || 2048, 8192),
       }),
       signal: AbortSignal.timeout(55_000),
     });
