@@ -1,41 +1,67 @@
-# Varnix AI backend
+# راه‌اندازی بک‌اند Varnix AI v3
 
-This folder contains the hosted backend foundation for Varnix AI.
+این راهنما را به‌ترتیب انجام دهید. بدون تکمیل این مراحل، APK به سرور متصل نمی‌شود.
 
-## Required setup (one time)
-1. Create a Supabase project.
-2. Open **SQL Editor** and run `schema.sql`.
-3. Deploy the Edge Function in `functions/chat` as `chat`.
-4. Set the Edge Function secret `OPENROUTER_API_KEY` in Supabase. Never put this secret in Flutter source code or GitHub.
-5. In the `profiles` table, change the intended owner's `role` to `admin` after that owner has registered. Do this only for the correct account.
+## ۱) ساخت پروژه Supabase
+1. در Supabase یک پروژه جدید بسازید.
+2. از **Project Settings → API** مقدار **Project URL** و **anon/public key** را بردارید.
+3. در **Authentication → Providers** ورود با Email را فعال کنید.
+4. اگر تأیید ایمیل روشن است، ارسال ایمیل و قالب‌های تأیید را تنظیم کنید.
 
-## Flutter configuration
-The mobile app will use the project's public URL and anon key (these are client configuration, not secrets) to authenticate users and read/write their own data. Row Level Security protects user records. The OpenRouter secret remains server-side.
+## ۲) ساخت جداول و سیاست‌های امنیتی
+فایل `schema.sql` را کامل در **SQL Editor** اجرا کنید. این فایل جدول‌های کاربران، تنظیمات عمومی، دستیارها، خریدها، گفتگوها و پیام‌ها را می‌سازد و Row Level Security را فعال می‌کند.
 
-## Current scope
-- Email identity profiles and roles
-- Global remote app configuration
-- Assistant catalog
-- User-owned conversations and messages
-- Purchase records with pending/paid/failed states
-- Authenticated AI proxy so provider credentials are not shipped in the APK
+نکته: نقش مدیر را از داخل اپلیکیشن نمی‌توان برای خود ارتقا داد. بعد از اینکه حساب مالک در اپ ثبت‌نام کرد، ایمیل همان حساب را پیدا کنید و فقط همان حساب را مدیر کنید. نمونه SQL:
 
-Payment activation must be performed by a trusted server-side payment verification flow. A client must never be allowed to mark its own purchase as paid.
+```sql
+update public.profiles
+set role = 'admin'
+where email = 'YOUR_OWNER_EMAIL';
+```
 
+جایگزین `YOUR_OWNER_EMAIL` را با ایمیل واقعی مالک کنید و قبل از اجرا مطمئن شوید دقیقاً یک ردیف انتخاب می‌شود.
 
-## Connect the current Flutter app
-1. In Supabase, open **Project Settings → API** and copy the **Project URL** and the **anon/public key**.
-2. In GitHub, open this repository's **Settings → Secrets and variables → Actions**.
-3. Add two repository secrets with these exact names:
-   - `SUPABASE_URL` — your Supabase Project URL.
-   - `SUPABASE_ANON_KEY` — your Supabase anon/public key.
-4. Open **Actions → Build Varnix AI APK** and run the workflow, or push a commit to `varnix-v3-foundation`.
-5. Download the generated `varnix-ai-apk` artifact from the completed workflow run.
+## ۳) تنظیم تابع هوش مصنوعی
+تابع `functions/chat/index.ts` را با نام `chat` در Supabase منتشر کنید. روش پیشنهادی با Supabase CLI:
 
-The current app build reads those values through Dart compile-time defines. If the secrets are not configured, the APK deliberately shows a setup-required screen instead of pretending the cloud service is connected.
+```bash
+supabase login
+supabase link --project-ref YOUR_PROJECT_REF
+supabase secrets set OPENROUTER_API_KEY=YOUR_OPENROUTER_API_KEY
+supabase functions deploy chat
+```
 
-## Auth and owner setup
-- In Supabase **Authentication → URL Configuration**, set the site URL and allowed redirect URLs for your app's password recovery flow.
-- Configure the email provider and decide whether email confirmation is required. Add `com.varnix.ai://login-callback/` to the Supabase Auth allowed redirect URLs for email confirmation and password recovery.
-- Register your own account in the app first. Then, in the Supabase SQL Editor, run an update setting only that account's `profiles.role` to `admin`.
-- Never put the OpenRouter API key or Supabase service-role key in GitHub repository files, Flutter build arguments, or chat messages. Add only `OPENROUTER_API_KEY` to the Supabase Edge Function secrets.
+کلید OpenRouter را فقط در Secrets سمت سرور قرار دهید. آن را در GitHub، Flutter، فایل APK یا پیام گفتگو قرار ندهید. این نسخه فعلاً آدرس HTTPS رسمی OpenRouter را می‌پذیرد.
+
+## ۴) تنظیم آدرس بازگشت ایمیل
+در **Authentication → URL Configuration → Redirect URLs** این آدرس را اضافه کنید:
+
+`com.varnix.ai://login-callback/`
+
+همچنین مطمئن شوید تأیید ایمیل و بازیابی رمز برای همین redirect مجاز هستند. اگر از لینک تأیید ایمیل استفاده می‌کنید، قالب ایمیل Supabase را متناسب با deep link اپ تنظیم کنید.
+
+## ۵) اتصال GitHub Actions به Supabase
+در مخزن GitHub وارد **Settings → Secrets and variables → Actions** شوید و این دو Repository Secret را بسازید:
+
+- `SUPABASE_URL` = Project URL
+- `SUPABASE_ANON_KEY` = anon/public key
+
+سپس در **Actions → Build Varnix AI APK** گردش‌کار را اجرا کنید. بعد از موفقیت، Artifact با نام `varnix-ai-apk` قابل دریافت است.
+
+این دو مقدار برای کلاینت هستند؛ کلید `service_role` را هرگز در برنامه یا GitHub Actions build arguments قرار ندهید.
+
+## امکانات بک‌اند
+- ورود و ثبت‌نام ایمیلی و پروفایل کاربر
+- نقش‌های user و admin
+- تنظیمات عمومی قابل تغییر از راه دور
+- فهرست دستیارهای قابل مدیریت
+- گفتگوها و پیام‌های مختص هر کاربر
+- سوابق خرید با وضعیت‌های pending/paid/failed/refunded
+- پراکسی احراز هویت‌شده برای درخواست هوش مصنوعی
+
+## مواردی که هنوز کامل نشده‌اند
+- اتصال و تأیید خودکار درگاه پرداخت؛ ثبت خرید pending به‌تنهایی پرداخت را تأیید نمی‌کند.
+- محدودسازی نرخ درخواست در سطح حساب/پلن و داشبورد مصرف.
+- آزمون یکپارچه روی پروژه Supabase واقعی و انتشار نهایی در فروشگاه.
+
+قبل از انتشار عمومی، سیاست‌های RLS، ایمیل‌ها، بکاپ پایگاه داده، محدودیت مصرف و حریم خصوصی را در پروژه واقعی آزمایش کنید.
