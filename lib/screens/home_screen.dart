@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/backend_service.dart';
 import 'chat_screen.dart';
+import 'academy_screen.dart';
 import 'owner_panel_screen.dart';
 import 'study_editor_screen.dart';
 
@@ -38,11 +39,12 @@ class _HomeScreenState extends State<HomeScreen> {
         IconButton(icon: const Icon(Icons.settings_outlined), onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AppSettingsScreen()))),
       ]),
       body: loading ? const Center(child: CircularProgressIndicator()) : IndexedStack(index: tab, children: [
-        _home(), _tools(), _plans(), _account(),
+        _home(), _tools(), const AcademyScreen(), _plans(), _account(),
       ]),
       bottomNavigationBar: NavigationBar(selectedIndex: tab, onDestinationSelected: (v) => setState(() => tab = v), destinations: const [
         NavigationDestination(icon: Icon(Icons.home_outlined), label: 'خانه'),
         NavigationDestination(icon: Icon(Icons.widgets_outlined), label: 'ابزارها'),
+        NavigationDestination(icon: Icon(Icons.school_outlined), label: 'آکادمی'),
         NavigationDestination(icon: Icon(Icons.workspace_premium_outlined), label: 'پلن‌ها'),
         NavigationDestination(icon: Icon(Icons.person_outline), label: 'حساب من'),
       ]),
@@ -56,7 +58,8 @@ class _HomeScreenState extends State<HomeScreen> {
     _tile(Icons.chat, 'شروع گفتگو با هوش مصنوعی', 'چت متنی با وارنیکس', () => openChat()),
     _tile(Icons.menu_book, 'دفتر درس و یادداشت', 'تایپ، انتخاب فونت و تنظیم صفحه', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const StudyEditorScreen()))),
     _tile(Icons.widgets, 'ابزارهای هوشمند', 'نگارش، خلاصه‌سازی، ترجمه و برنامه‌نویسی', () => setState(() => tab = 1)),
-    _tile(Icons.workspace_premium, 'مشاهده پلن‌ها', 'امکانات اشتراک رایگان و حرفه‌ای', () => setState(() => tab = 2)),
+    _tile(Icons.school, 'آکادمی وارنیکس', 'دوره آموزشی، درس، آزمون و فلش‌کارت', () => setState(() => tab = 2)),
+    _tile(Icons.workspace_premium, 'مشاهده پلن‌ها', 'امکانات اشتراک رایگان و حرفه‌ای', () => setState(() => tab = 3)),
   ]);
   Widget _tools() {
     final items = [
