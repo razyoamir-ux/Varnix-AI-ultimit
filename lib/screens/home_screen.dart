@@ -185,28 +185,30 @@ class _HomeScreenState extends State<HomeScreen> {
     ]);
   }
   Widget _plans() => ListView(padding: const EdgeInsets.all(18), children: [
-    const Text('پلن‌های وارنیکس', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+    const Text('نسخه‌های وارنیکس', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
     const SizedBox(height: 12),
-    _planCard('رایگان', '۰ تومان', '۲۰ درخواست در روز • حداکثر ۱٬۰۲۴ توکن برای هر پاسخ • دسترسی پایه', plan == 'free'),
-    _planCard('پرو', proPrice.isEmpty ? 'قیمت در حال تنظیم' : '$proPrice تومان', '۱۰۰ درخواست در روز • حداکثر ۲٬۰۴۸ توکن برای هر پاسخ • مناسب استفاده روزمره', plan == 'pro'),
-    if (paymentEnabled && plan != 'pro') ...[
-      const SizedBox(height: 8),
-      SizedBox(width: double.infinity, child: FilledButton.icon(
-        onPressed: paymentLoading ? null : _buyPro,
-        icon: paymentLoading ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.payment),
-        label: Text(paymentLoading ? 'در حال ساخت پرداخت...' : 'خرید اشتراک پرو با نکست‌پی'),
-      )),
+    if (admin) ...[
+      _planCard('مالک (مخفی)', 'دسترسی مدیریتی', 'دسترسی کامل به تنظیمات، کاربران، مدل‌ها، محدودیت‌ها و آمار برنامه.', true),
+    ] else ...[
+      _planCard('رایگان', '۰ تومان', '۳۰ پیام در روز • ۳ عکس • ۲ فایل • ۱ ویدئو • مکالمه صوتی محدود • تبلیغات', plan == 'free'),
+      _planCard('حرفه‌ای Pro', proPrice.isEmpty ? '۱۳۶٬۰۰۰ تومان' : '$proPrice تومان', 'مهارت‌های حرفه‌ای • فایل و عکس بدون سهمیه روزانه • مکالمه صوتی اقتصادی و پیشرفته • حذف تبلیغات • تولید تصویر و ویدئو با سهمیه مشخص', plan == 'pro'),
+      if (paymentEnabled && plan != 'pro') ...[
+        const SizedBox(height: 8),
+        SizedBox(width: double.infinity, child: FilledButton.icon(
+          onPressed: paymentLoading ? null : _buyPro,
+          icon: paymentLoading ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.workspace_premium),
+          label: Text(paymentLoading ? 'در حال آماده‌سازی پرداخت...' : 'خرید نسخه حرفه‌ای'),
+        )),
+      ],
     ],
     OutlinedButton.icon(onPressed: _refreshPlan, icon: const Icon(Icons.refresh), label: const Text('تازه‌سازی وضعیت اشتراک')),
-    _planCard('پرو مکس', 'اشتراک پولی', '۳۰۰ درخواست در روز • حداکثر ۴٬۰۹۶ توکن برای هر پاسخ • استفاده سنگین‌تر', plan == 'pro_max'),
-    _planCard('اولترا مکس', 'اشتراک پولی', '۸۰۰ درخواست در روز • حداکثر ۸٬۱۹۲ توکن برای هر پاسخ • بالاترین سهمیه', plan == 'ultra_max'),
     const SizedBox(height: 8),
-    const Text('سهمیه‌ها در سرور کنترل می‌شوند. پرداخت از طریق درگاه امن نکست‌پی انجام می‌شود و اشتراک پس از تأیید بانکی فعال خواهد شد.', style: TextStyle(color: Colors.white60)),
+    const Text('محدودیت‌های روزانه رایگان و سهمیه تولید تصویر و ویدئو از پنل مالک مدیریت می‌شوند. هزینه مصرف API همچنان بر عهده صاحب کلید API است.', style: TextStyle(color: Colors.white60)),
   ]);
   Widget _account() => ListView(padding: const EdgeInsets.all(18), children: [
     const CircleAvatar(radius: 34, child: Icon(Icons.person, size: 36)),
     const SizedBox(height: 12), Text(BackendService.currentUser?.email ?? 'حساب کاربری', textAlign: TextAlign.center),
-    const SizedBox(height: 10), Text('پلن فعلی: ${{'free': 'رایگان', 'pro': 'پرو', 'pro_max': 'پرو مکس', 'ultra_max': 'اولترا مکس'}[plan] ?? 'رایگان'}', textAlign: TextAlign.center),
+    const SizedBox(height: 10), Text('پلن فعلی: ${{'free': 'رایگان', 'pro': 'حرفه‌ای', 'owner': 'مالک'}[plan] ?? 'رایگان'}', textAlign: TextAlign.center),
     if (admin) _tile(Icons.admin_panel_settings, 'پنل مالک', 'مدیریت برنامه', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const OwnerPanelScreen()))),
     _tile(Icons.help_outline, 'راهنمای استفاده از وارنیکس', 'مشاهده دوباره آموزش چندمرحله‌ای', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const HelpGuideScreen()))),
     _tile(Icons.settings, 'تنظیمات ظاهر و فونت', 'شخصی‌سازی تجربه برنامه', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AppSettingsScreen()))),
