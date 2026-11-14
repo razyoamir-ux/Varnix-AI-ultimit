@@ -45,6 +45,7 @@ class _AuthScreenState extends State<AuthScreen> {
         final result = await BackendService.client.auth.signUp(
           email: email,
           password: password,
+          emailRedirectTo: 'com.varnix.ai://login-callback/',
           data: {'display_name': _name.text.trim()},
         );
         if (mounted && result.session == null) {
@@ -69,7 +70,10 @@ class _AuthScreenState extends State<AuthScreen> {
       return;
     }
     try {
-      await BackendService.client.auth.resetPasswordForEmail(email);
+      await BackendService.client.auth.resetPasswordForEmail(
+        email,
+        redirectTo: 'com.varnix.ai://login-callback/',
+      );
       _notice('لینک بازیابی رمز برایتان ایمیل شد.');
     } on AuthException catch (e) {
       _notice(e.message);
