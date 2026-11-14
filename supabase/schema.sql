@@ -164,3 +164,41 @@ grant select, insert, update, delete on public.assistants to authenticated;
 grant select, insert on public.purchases to authenticated;
 grant select, insert, update, delete on public.conversations to authenticated;
 grant select, insert, update, delete on public.messages to authenticated;
+
+-- Security hardening: users may edit only their display name directly.
+-- Role and subscription changes are reserved for administrators.
+revoke update on public.profiles from authenticated;
+grant update (display_name) on public.profiles to authenticated;
+
+create or replace function public.admin_update_profile(
+  target_user_id uuid,
+  new_role text default null,
+  new_plan_code text default null,
+  new_plan_expires_at timestamptz default null
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if not public.is_admin() then
+    raise exception 'Administrator access required';
+  end if;
+  if new_role is not null and new_role not in ('user', 'admin') then
+    raise exception 'Invalid role';
+  end if;
+  update public.profiles
+  set role = coalesce(new_role, role),
+      plan_code = coalesce(new_plan_code, plan_code),
+      plan_expires_at = case
+        when new_plan_expires_at is not null then new_plan_expires_at
+        else plan_expires_at
+      end,
+      updated_at = now()
+  where id = target_user_id;
+end;
+$$;
+
+revoke all on function public.admin_update_profile(uuid, text, text, timestamptz) from public;
+grant execute on function public.admin_update_profile(uuid, text, text, timestamptz) to authenticated;
