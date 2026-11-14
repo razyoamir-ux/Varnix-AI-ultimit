@@ -96,7 +96,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
   Future<void> _loadConversation() async {
     try {
-      _isAdmin = await BackendService.isCurrentUserAdmin();
+      _isAdmin = await BackendService.isCurrentUserAdmin();\n      if (widget.supportMode) { _selectedAssistantName = 'دستیار راهنمای وارنیکس'; _selectedAssistantIcon = '🛟'; }
       final config = await BackendService.loadAppConfig();
       _appName = config['app_name']?.toString() ?? 'Varnix AI';
       _announcement = config['announcement']?.toString() ?? '';
@@ -250,7 +250,7 @@ class _ChatScreenState extends State<ChatScreen> {
       final history = _messages
           .map((m) => <String, String>{'role': m.role, 'content': m.content})
           .toList();
-      final answer = await BackendService.sendChat(messages: history, assistantId: _selectedAssistantId, userInstructions: _userInstructions);
+      final answer = await BackendService.sendChat(messages: history, assistantId: widget.supportMode ? null : _selectedAssistantId, userInstructions: _userInstructions, supportMode: widget.supportMode);
       final saved = await BackendService.client.from('messages').insert({
         'conversation_id': conversationId,
         'user_id': user.id,
@@ -542,10 +542,10 @@ class _ChatScreenState extends State<ChatScreen> {
                               children: [
                                 Icon(Icons.auto_awesome, size: 54, color: Color(0xFFA78BFA)),
                                 SizedBox(height: 16),
-                                Text('سلام! من وارنیکس هستم.',
+                                Text(widget.supportMode ? 'سلام! من دستیار راهنمای وارنیکس هستم.' : 'سلام! من وارنیکس هستم.',
                                   style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
                                 SizedBox(height: 8),
-                                Text('هر سؤالی داری بپرس تا با هم شروع کنیم.',
+                                Text(widget.supportMode ? 'درباره امکانات، تنظیمات، حساب کاربری، پلن‌ها یا خطاهای برنامه سؤال بپرس.' : 'هر سؤالی داری بپرس تا با هم شروع کنیم.',
                                   textAlign: TextAlign.center,
                                   style: TextStyle(color: Colors.white60)),
                               ],
