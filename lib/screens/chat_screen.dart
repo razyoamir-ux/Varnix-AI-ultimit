@@ -436,7 +436,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 const Divider(height: 24),
                 Expanded(
                   child: _conversations.isEmpty
-                      ? const Center(child: Text('هنوز گفتگویی ندارید',
+                      ? Center(child: Text('هنوز گفتگویی ندارید',
                           style: TextStyle(color: Colors.white54)))
                       : ListView.builder(
                           itemCount: _conversations.length,
