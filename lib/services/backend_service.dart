@@ -1,5 +1,6 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// Shared Supabase access. Provider secrets stay in Supabase Edge Function secrets.
 class BackendService {
@@ -42,12 +43,20 @@ class BackendService {
   static Future<String> sendChat({required List<Map<String, String>> messages, String? assistantId, String? userInstructions, bool supportMode = false}) async {
     const secureStorage = FlutterSecureStorage();
     final userId = currentUser?.id;
-    final personalKey = userId == null ? null : await secureStorage.read(key: 'openrouter_user_api_key_$userId');
+    final prefs = await SharedPreferences.getInstance();
+    final providerId = prefs.getString('varnix_provider_id') ?? 'openrouter';
+    final selectedModel = prefs.getString('varnix_provider_model');
+    final personalKey = userId == null ? null : providerId == 'openrouter'
+        ? await secureStorage.read(key: 'openrouter_user_api_key_$userId')
+        : await secureStorage.read(key: 'varnix_provider_api_key_${userId}_$providerId');
     final FunctionResponse response;
     try {
       response = await client.functions.invoke('chat', body: {
         'messages': messages,
-        if (personalKey != null && personalKey.isNotEmpty) 'openrouter_api_key': personalKey,
+        'provider_id': providerId,
+        if (selectedModel != null && selectedModel.isNotEmpty) 'model': selectedModel,
+        if (personalKey != null && personalKey.isNotEmpty)
+          (providerId == 'openrouter' ? 'openrouter_api_key' : 'provider_api_key'): personalKey,
         if (assistantId != null) 'assistant_id': assistantId,
         if (supportMode) 'support_mode': true,
         if (userInstructions != null && userInstructions.trim().isNotEmpty) 'user_instructions': userInstructions.trim(),
