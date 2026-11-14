@@ -58,7 +58,7 @@ class OpenRouterAuthService {
         'code_challenge_method': 'S256',
       }),
     );
-    await _storage.delete(key: _verifierName);
+    await _storage.delete(key: _verifierName(userId));
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw Exception('تأیید حساب OpenRouter ناموفق بود (${response.statusCode}).');
     }
