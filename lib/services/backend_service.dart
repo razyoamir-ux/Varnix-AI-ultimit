@@ -22,6 +22,18 @@ class BackendService {
     return row?['role'] == 'admin';
   }
 
+  static Future<String> createNextpayPayment() async {
+    final response = await client.functions.invoke('nextpay-payment', body: <String, dynamic>{});
+    final data = response.data;
+    if (response.status < 200 || response.status >= 300 || data is! Map || data['payment_url'] is! String) {
+      final message = data is Map && data['error'] != null
+          ? data['error'].toString()
+          : 'ساخت لینک پرداخت ناموفق بود.';
+      throw Exception(message);
+    }
+    return data['payment_url'].toString();
+  }
+
   static Future<Map<String, dynamic>> createOpenRouterUserKey() async {
     final response = await client.functions.invoke(
       'provision-openrouter-key',
