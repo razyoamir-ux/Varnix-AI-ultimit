@@ -72,6 +72,23 @@ class _AuthScreenState extends State<AuthScreen> {
     }
   }
 
+  Future<void> _signInWithGoogle() async {
+    setState(() => _busy = true);
+    try {
+      await BackendService.client.auth.signInWithOAuth(
+        OAuthProvider.google,
+        redirectTo: 'com.varnix.ai://login-callback/',
+        authScreenLaunchMode: LaunchMode.externalApplication,
+      );
+    } on AuthException catch (e) {
+      _notice(e.message);
+    } catch (e) {
+      _notice('ورود با Google انجام نشد: $e');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
   Future<void> _resetPassword() async {
     final email = _email.text.trim();
     if (email.isEmpty || !email.contains('@')) {
@@ -165,6 +182,23 @@ class _AuthScreenState extends State<AuthScreen> {
                                   child: CircularProgressIndicator(strokeWidth: 2))
                               : Text(_isSignUp ? 'ساخت حساب' : 'ورود'),
                         ),
+                      ),
+                      const SizedBox(height: 12),
+                      OutlinedButton.icon(
+                        onPressed: _busy ? null : _signInWithGoogle,
+                        icon: const Icon(Icons.g_mobiledata, size: 30),
+                        label: const Text('ورود / ثبت‌نام با Google'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.white,
+                          side: const BorderSide(color: Color(0xFF8B82A8)),
+                          minimumSize: const Size.fromHeight(50),
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      const Text(
+                        'با حساب Google مستقیماً وارد می‌شوی؛ نیازی به تأیید جداگانه ایمیل نیست.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: Colors.white60, fontSize: 12),
                       ),
                       if (!_isSignUp)
                         TextButton(onPressed: _busy ? null : _resetPassword,
