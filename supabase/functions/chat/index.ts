@@ -26,9 +26,8 @@ serve(async (req) => {
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
   const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
-  const openRouterKey = Deno.env.get("OPENROUTER_API_KEY");
+  const serverOpenRouterKey = Deno.env.get("OPENROUTER_API_KEY");
   if (!supabaseUrl || !anonKey) return json({ error: "Backend is not configured" }, 503);
-  if (!openRouterKey) return json({ error: "AI provider is not configured" }, 503);
 
   const declaredLength = Number(req.headers.get("content-length") ?? "0");
   if (declaredLength > 128_000) return json({ error: "Request is too large" }, 413);
@@ -49,6 +48,16 @@ serve(async (req) => {
       payload = JSON.parse(rawBody);
     } catch {
       return json({ error: "Invalid JSON body" }, 400);
+    }
+
+    const suppliedUserKey = payload?.openrouter_api_key;
+    if (suppliedUserKey !== undefined &&
+        (typeof suppliedUserKey !== "string" || !suppliedUserKey.startsWith("sk-or-") || suppliedUserKey.length > 512)) {
+      return json({ error: "Personal OpenRouter key is invalid" }, 400);
+    }
+    const openRouterKey = suppliedUserKey || serverOpenRouterKey;
+    if (!openRouterKey) {
+      return json({ error: "برای استفاده از هوش مصنوعی، ابتدا حساب OpenRouter را متصل کن." }, 503);
     }
 
     const incoming = payload?.messages;
