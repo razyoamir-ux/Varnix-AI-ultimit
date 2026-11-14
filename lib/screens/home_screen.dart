@@ -34,7 +34,18 @@ class _HomeScreenState extends State<HomeScreen> {
         displayName = p?['display_name']?.toString() ?? '';
         plan = p?['plan_code']?.toString() ?? 'free';
         announcement = c['announcement']?.toString() ?? '';
-        needsPersonalKey = !await OpenRouterAuthService.isConnected(user.id);
+        final prefs = await SharedPreferences.getInstance();
+        final selectedProvider = prefs.getString('varnix_provider_id') ?? 'openrouter';
+        const secure = FlutterSecureStorage();
+        final savedKey = await secure.read(
+          key: selectedProvider == 'openrouter'
+              ? 'openrouter_user_api_key_${user.id}'
+              : 'varnix_provider_api_key_${user.id}_$selectedProvider',
+        );
+        final openRouterLinked = selectedProvider == 'openrouter'
+            ? await OpenRouterAuthService.isConnected(user.id)
+            : false;
+        needsPersonalKey = (savedKey == null || savedKey.isEmpty) && !openRouterLinked;
       }
     } catch (_) {} finally {
       if (mounted) setState(() => loading = false);
@@ -66,13 +77,12 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             Icon(Icons.key_off_rounded, color: Color(0xFFC4B5FD)),
             SizedBox(width: 10),
-            Expanded(child: Text('کلید شخصی OpenRouter نداری')),
+            Expanded(child: Text('کلید API تنظیم نشده است')),
           ],
         ),
         content: const Text(
-          'برای استفاده از حساب شخصی هوش مصنوعی، هنوز حساب OpenRouter را به وارنیکس وصل نکرده‌ای. '
-          'می‌توانی همین حالا از داخل برنامه وارد OpenRouter شوی یا ثبت‌نام کنی؛ '
-          'پس از تأیید دسترسی، کلید API به‌صورت خودکار و امن در برنامه ذخیره می‌شود.',
+          'برای استفاده از هوش مصنوعی، باید یک سرویس API انتخاب کنی و کلید شخصی آن را در تنظیمات وارنیکس ذخیره کنی. '
+          'می‌توانی از OpenRouter یا یکی از سرویس‌های دیگر پشتیبانی‌شده استفاده کنی. کلید در حافظه امن همین گوشی نگهداری می‌شود.',
           style: TextStyle(height: 1.7),
         ),
         actions: [
@@ -89,7 +99,7 @@ class _HomeScreenState extends State<HomeScreen> {
               );
             },
             icon: const Icon(Icons.link_rounded),
-            label: const Text('اتصال حساب OpenRouter'),
+            label: const Text('تنظیم سرویس API'),
           ),
         ],
       ),
