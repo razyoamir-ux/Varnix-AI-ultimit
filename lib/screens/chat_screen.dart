@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/chat_message.dart';
 import '../services/backend_service.dart';
 import '../widgets/message_bubble.dart';
 import '../widgets/typing_indicator.dart';
+import 'owner_panel_screen.dart';
 
 class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key});
@@ -17,6 +19,10 @@ class _ChatScreenState extends State<ChatScreen> {
   String? _conversationId;
   bool _loading = true;
   bool _sending = false;
+  bool _isAdmin = false;
+  String _appName = 'Varnix AI';
+  String _announcement = '';
+  RealtimeChannel? _configChannel;
 
   @override
   void initState() {
@@ -26,6 +32,26 @@ class _ChatScreenState extends State<ChatScreen> {
 
   Future<void> _loadConversation() async {
     try {
+      _isAdmin = await BackendService.isCurrentUserAdmin();
+      final config = await BackendService.loadAppConfig();
+      _appName = config['app_name']?.toString() ?? 'Varnix AI';
+      _announcement = config['announcement']?.toString() ?? '';
+      _configChannel = BackendService.client
+          .channel('varnix-app-config')
+          .onPostgresChanges(
+            event: PostgresChangeEvent.all,
+            schema: 'public',
+            table: 'app_config',
+            callback: (payload) {
+              final record = payload.newRecord;
+              if (!mounted || record.isEmpty) return;
+              setState(() {
+                _appName = record['app_name']?.toString() ?? _appName;
+                _announcement = record['announcement']?.toString() ?? _announcement;
+              });
+            },
+          )
+          .subscribe();
       final rows = await BackendService.client
           .from('conversations')
           .select('id')
@@ -174,7 +200,7 @@ class _ChatScreenState extends State<ChatScreen> {
           title: const Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Varnix AI', style: TextStyle(fontWeight: FontWeight.bold)),
+              Text(_appName, style: TextStyle(fontWeight: FontWeight.bold)),
               Text('دستیار هوشمند شما', style: TextStyle(fontSize: 11, color: Colors.white60)),
             ],
           ),
@@ -185,16 +211,31 @@ class _ChatScreenState extends State<ChatScreen> {
               onSelected: (value) {
                 if (value == 'logout') _signOut();
                 if (value == 'email') _showError(email);
+                if (value == 'admin') {
+                  Navigator.of(context).push(MaterialPageRoute(
+                    builder: (_) => const OwnerPanelScreen(),
+                  ));
+                }
               },
-              itemBuilder: (_) => const [
-                PopupMenuItem(value: 'email', child: Text('حساب کاربری')),
-                PopupMenuItem(value: 'logout', child: Text('خروج از حساب')),
+              itemBuilder: (_) => [
+                if (_isAdmin)
+                  const PopupMenuItem(value: 'admin', child: Text('پنل مدیریت')),
+                const PopupMenuItem(value: 'email', child: Text('حساب کاربری')),
+                const PopupMenuItem(value: 'logout', child: Text('خروج از حساب')),
               ],
             ),
           ],
         ),
         body: Column(
           children: [
+            if (_announcement.isNotEmpty)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+                color: const Color(0xFF30204F),
+                child: Text(_announcement, textAlign: TextAlign.center,
+                  style: const TextStyle(color: Colors.white70)),
+              ),
             Expanded(
               child: _loading
                   ? const Center(child: CircularProgressIndicator())
@@ -277,6 +318,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
   @override
   void dispose() {
+    _configChannel?.unsubscribe();
     _controller.dispose();
     _scroll.dispose();
     super.dispose();
