@@ -8,7 +8,8 @@ import 'owner_panel_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class ChatScreen extends StatefulWidget {
-  const ChatScreen({super.key});
+  final String? initialPrompt;
+  const ChatScreen({super.key, this.initialPrompt});
   @override
   State<ChatScreen> createState() => _ChatScreenState();
 }
@@ -37,7 +38,11 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   void initState() {
     super.initState();
-    _loadConversation();
+    _loadConversation().then((_) {
+      if (widget.initialPrompt != null && mounted) {
+        _controller.text = widget.initialPrompt!;
+      }
+    });
   }
 
   Future<void> _loadConversation() async {
