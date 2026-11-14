@@ -5,6 +5,7 @@ import '../services/backend_service.dart';
 import '../widgets/message_bubble.dart';
 import '../widgets/typing_indicator.dart';
 import 'owner_panel_screen.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key});
@@ -27,6 +28,10 @@ class _ChatScreenState extends State<ChatScreen> {
   bool _isAdmin = false;
   String _appName = 'Varnix AI';
   String _announcement = '';
+  String _rubikaUrl = '';
+  String _myketUrl = '';
+  String _planCode = 'free';
+  String? _planExpiresAt;
   RealtimeChannel? _configChannel;
 
   @override
@@ -41,6 +46,15 @@ class _ChatScreenState extends State<ChatScreen> {
       final config = await BackendService.loadAppConfig();
       _appName = config['app_name']?.toString() ?? 'Varnix AI';
       _announcement = config['announcement']?.toString() ?? '';
+      _rubikaUrl = config['rubika_url']?.toString() ?? '';
+      _myketUrl = config['myket_url']?.toString() ?? '';
+      final profile = await BackendService.client
+          .from('profiles')
+          .select('plan_code,plan_expires_at')
+          .eq('id', BackendService.currentUser!.id)
+          .maybeSingle();
+      _planCode = profile?['plan_code']?.toString() ?? 'free';
+      _planExpiresAt = profile?['plan_expires_at']?.toString();
       final assistantRows = await BackendService.client
           .from('assistants')
           .select('id,name,icon')
@@ -59,6 +73,8 @@ class _ChatScreenState extends State<ChatScreen> {
               setState(() {
                 _appName = record['app_name']?.toString() ?? _appName;
                 _announcement = record['announcement']?.toString() ?? _announcement;
+                _rubikaUrl = record['rubika_url']?.toString() ?? _rubikaUrl;
+                _myketUrl = record['myket_url']?.toString() ?? _myketUrl;
               });
             },
           )
@@ -223,6 +239,52 @@ class _ChatScreenState extends State<ChatScreen> {
     await BackendService.signOut();
   }
 
+  Future<void> _openExternal(String value, String emptyMessage) async {
+    if (value.trim().isEmpty) {
+      _showError(emptyMessage);
+      return;
+    }
+    final uri = Uri.tryParse(value.trim());
+    if (uri == null || !uri.hasScheme) {
+      _showError('لینک واردشده معتبر نیست.');
+      return;
+    }
+    try {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } catch (e) {
+      _showError('بازکردن لینک انجام نشد: $e');
+    }
+  }
+
+  void _showAccount(String email) {
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('حساب کاربری'),
+        content: Text(email.isEmpty ? 'ایمیل حساب در دسترس نیست.' : email),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('بستن')),
+        ],
+      ),
+    );
+  }
+
+  void _showPlan() {
+    final pro = _planCode.toLowerCase() == 'pro';
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('اشتراک وارنیکس'),
+        content: Text(pro
+            ? 'پلن شما: حرفه‌ای\\nتاریخ پایان: ${_planExpiresAt ?? 'نامشخص'}'
+            : 'پلن فعلی شما رایگان است. امکان خرید پلن حرفه‌ای پس از اتصال درگاه پرداخت فعال می‌شود.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('متوجه شدم')),
+        ],
+      ),
+    );
+  }
+
   void _showError(String message) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
@@ -336,7 +398,10 @@ class _ChatScreenState extends State<ChatScreen> {
             PopupMenuButton<String>(
               onSelected: (value) {
                 if (value == 'logout') _signOut();
-                if (value == 'email') _showError(email);
+                if (value == 'email') _showAccount(email);
+                if (value == 'plan') _showPlan();
+                if (value == 'myket') _openExternal(_myketUrl, 'صفحه مایکت پس از انتشار تنظیم می‌شود.');
+                if (value == 'rubika') _openExternal(_rubikaUrl, 'لینک کانال روبیکا هنوز تنظیم نشده است.');
                 if (value == 'admin') {
                   Navigator.of(context).push(MaterialPageRoute(
                     builder: (_) => const OwnerPanelScreen(),
@@ -347,6 +412,10 @@ class _ChatScreenState extends State<ChatScreen> {
                 if (_isAdmin)
                   const PopupMenuItem(value: 'admin', child: Text('پنل مدیریت')),
                 const PopupMenuItem(value: 'email', child: Text('حساب کاربری')),
+                const PopupMenuItem(value: 'plan', child: Text('اشتراک وارنیکس')),
+                const PopupMenuItem(value: 'myket', child: Text('امتیاز به وارنیکس در مایکت')),
+                if (_rubikaUrl.isNotEmpty)
+                  const PopupMenuItem(value: 'rubika', child: Text('کانال روبیکا')),
                 const PopupMenuItem(value: 'logout', child: Text('خروج از حساب')),
               ],
             ),
