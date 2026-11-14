@@ -10,7 +10,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class ChatScreen extends StatefulWidget {
   final String? initialPrompt;
-  const ChatScreen({super.key, this.initialPrompt});
+  final bool supportMode;
+  const ChatScreen({super.key, this.initialPrompt, this.supportMode = false});
   @override
   State<ChatScreen> createState() => _ChatScreenState();
 }
@@ -460,12 +461,12 @@ class _ChatScreenState extends State<ChatScreen> {
           title: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(_appName, style: TextStyle(fontWeight: FontWeight.bold)),
+              Text(widget.supportMode ? 'راهنمای وارنیکس' : _appName, style: const TextStyle(fontWeight: FontWeight.bold)),
               Text('$_selectedAssistantIcon $_selectedAssistantName', style: const TextStyle(fontSize: 11, color: Colors.white60)),
             ],
           ),
           actions: [
-            PopupMenuButton<String>(
+            if (!widget.supportMode) PopupMenuButton<String>(
               tooltip: 'انتخاب دستیار',
               icon: const Icon(Icons.smart_toy_outlined),
               onSelected: (value) {
