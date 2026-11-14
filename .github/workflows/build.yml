@@ -8,6 +8,10 @@ on:
       - master
       - varnix-v3-foundation
 
+concurrency:
+  group: varnix-v3-build-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
