@@ -64,6 +64,14 @@ serve(async (req) => {
       novita: { baseUrl: "https://api.novita.ai/openai/v1" },
       nvidia: { baseUrl: "https://integrate.api.nvidia.com/v1" },
       xai: { baseUrl: "https://api.x.ai/v1" },
+      openai: { baseUrl: "https://api.openai.com/v1" },
+      qwen: { baseUrl: "https://dashscope-intl.aliyuncs.com/compatible-mode/v1" },
+      zai: { baseUrl: "https://api.z.ai/api/paas/v4" },
+      moonshot: { baseUrl: "https://api.moonshot.ai/v1" },
+      huggingface: { baseUrl: "https://router.huggingface.co/v1" },
+      sambanova: { baseUrl: "https://api.sambanova.ai/v1" },
+      siliconflow: { baseUrl: "https://api.siliconflow.com/v1" },
+      minimax: { baseUrl: "https://api.minimax.io/v1" },
     };
     const providerId = typeof payload?.provider_id === "string" ? payload.provider_id : "openrouter";
     const provider = providers[providerId];
