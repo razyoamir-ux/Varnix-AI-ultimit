@@ -36,7 +36,7 @@ class _HomeScreenState extends State<HomeScreen> {
     } catch (_) {} finally {
       if (mounted) setState(() => loading = false);
     }
-    if (mounted) _showFirstRunGuideIfNeeded();
+    if (mounted) await _showFirstRunGuideIfNeeded();
     if (mounted && needsPersonalKey) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _showMissingOpenRouterKeyDialog();
