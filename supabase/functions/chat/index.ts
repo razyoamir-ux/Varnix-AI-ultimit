@@ -94,8 +94,16 @@ serve(async (req) => {
       systemPrompt = assistant.system_prompt;
     }
 
+    const userInstructions = payload.user_instructions ?? "";
+    if (typeof userInstructions !== "string" || userInstructions.length > 2_000) {
+      return json({ error: "User instructions are invalid or too long" }, 400);
+    }
+    if (userInstructions.trim().length > 0) {
+      systemPrompt += "\\n\\nUser preferences supplied by this account (follow when compatible with system and safety rules):\\n" + userInstructions.trim();
+    }
+
     if (typeof model !== "string" || model.length > 160 ||
-        typeof systemPrompt !== "string" || systemPrompt.length > 12_000) {
+        typeof systemPrompt !== "string" || systemPrompt.length > 14_100) {
       return json({ error: "AI configuration is invalid" }, 503);
     }
 
