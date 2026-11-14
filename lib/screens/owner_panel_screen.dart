@@ -21,6 +21,7 @@ class _OwnerPanelScreenState extends State<OwnerPanelScreen> {
   bool _saving = false;
   bool _allowed = false;
   List<Map<String, dynamic>> _assistants = [];
+  List<Map<String, dynamic>> _users = [];
 
   @override
   void initState() {
@@ -43,10 +44,46 @@ class _OwnerPanelScreenState extends State<OwnerPanelScreen> {
       _duration.text = (config['pro_duration_days'] ?? 30).toString();
       _announcement.text = config['announcement']?.toString() ?? '';
       await _loadAssistants();
+      await _loadUsers();
     } catch (e) {
       _notify('بارگذاری تنظیمات ناموفق بود: $e');
     } finally {
       if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _loadUsers() async {
+    final rows = await BackendService.client
+        .from('profiles')
+        .select('id,email,display_name,role,plan_code,plan_expires_at')
+        .order('created_at', ascending: false)
+        .limit(100);
+    _users = rows.map((row) => Map<String, dynamic>.from(row)).toList();
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _applyUserAction(Map<String, dynamic> user, String action) async {
+    try {
+      final params = <String, dynamic>{'target_user_id': user['id']};
+      if (action == 'pro') {
+        final days = int.tryParse(_duration.text.trim()) ?? 30;
+        params['new_plan_code'] = 'pro';
+        params['new_plan_expires_at'] = DateTime.now()
+            .add(Duration(days: days))
+            .toUtc()
+            .toIso8601String();
+      } else if (action == 'free') {
+        params['new_plan_code'] = 'free';
+      } else if (action == 'admin') {
+        params['new_role'] = 'admin';
+      } else if (action == 'user') {
+        params['new_role'] = 'user';
+      }
+      await BackendService.client.rpc('admin_update_profile', params: params);
+      await _loadUsers();
+      _notify('اطلاعات کاربر به‌روزرسانی شد.');
+    } catch (e) {
+      _notify('تغییر حساب کاربر ناموفق بود: $e');
     }
   }
 
@@ -241,6 +278,53 @@ class _OwnerPanelScreenState extends State<OwnerPanelScreen> {
                       _field('قیمت پلن', _price),
                       _field('مدت پلن (روز)', _duration, keyboard: TextInputType.number),
                       _field('اعلان عمومی برای کاربران', _announcement, lines: 3),
+                      const Divider(height: 30),
+                      Row(
+                        children: [
+                          const Expanded(
+                            child: Text('مدیریت کاربران و پلن‌ها',
+                              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                          ),
+                          IconButton(
+                            tooltip: 'بارگذاری دوباره کاربران',
+                            onPressed: _loadUsers,
+                            icon: const Icon(Icons.refresh),
+                          ),
+                        ],
+                      ),
+                      if (_users.isEmpty)
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 12),
+                          child: Text('کاربری ثبت‌نام نکرده است.',
+                            style: TextStyle(color: Colors.white60)),
+                        ),
+                      ..._users.map((user) => Card(
+                        color: const Color(0xFF211A35),
+                        child: ListTile(
+                          leading: CircleAvatar(
+                            child: Text((user['display_name']?.toString().isNotEmpty == true)
+                                ? user['display_name'].toString().substring(0, 1)
+                                : '؟'),
+                          ),
+                          title: Text(user['display_name']?.toString().isNotEmpty == true
+                              ? user['display_name'].toString()
+                              : (user['email']?.toString() ?? 'کاربر')),
+                          subtitle: Text(
+                            '${user['email'] ?? ''} • ${user['plan_code'] ?? 'free'} • ${user['role'] ?? 'user'}',
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          trailing: PopupMenuButton<String>(
+                            onSelected: (value) => _applyUserAction(user, value),
+                            itemBuilder: (_) => const [
+                              PopupMenuItem(value: 'pro', child: Text('فعال‌سازی پلن حرفه‌ای')),
+                              PopupMenuItem(value: 'free', child: Text('بازگشت به پلن رایگان')),
+                              PopupMenuItem(value: 'admin', child: Text('اعطای دسترسی مدیر')),
+                              PopupMenuItem(value: 'user', child: Text('حذف دسترسی مدیر')),
+                            ],
+                          ),
+                        ),
+                      )),
                       const Divider(height: 30),
                       Row(
                         children: [
