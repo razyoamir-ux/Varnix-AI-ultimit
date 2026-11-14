@@ -305,8 +305,12 @@ class _OwnerPanelScreenState extends State<OwnerPanelScreen> {
     final advancedVoice = int.tryParse(_freeAdvancedVoice.text.trim());
     final proImages = int.tryParse(_proImages.text.trim());
     final proVideos = int.tryParse(_proVideos.text.trim());
-    if ([basePrice, proPrice, freeMessages, freeImages, freeFiles, freeVideos,
-      economicVoice, advancedVoice, proImages, proVideos].any((v) => v == null || v < 0)) {
+    if (basePrice == null || proPrice == null || freeMessages == null ||
+        freeImages == null || freeFiles == null || freeVideos == null ||
+        economicVoice == null || advancedVoice == null || proImages == null ||
+        proVideos == null || basePrice < 0 || proPrice < 0 || freeMessages < 0 ||
+        freeImages < 0 || freeFiles < 0 || freeVideos < 0 ||
+        economicVoice < 0 || advancedVoice < 0 || proImages < 0 || proVideos < 0) {
       _notify('قیمت‌ها و سهمیه‌ها باید عدد معتبر و غیرمنفی باشند.');
       return;
     }
