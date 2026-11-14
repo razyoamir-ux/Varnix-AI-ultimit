@@ -99,7 +99,7 @@ serve(async (req) => {
       return json({ error: "User instructions are invalid or too long" }, 400);
     }
     if (userInstructions.trim().length > 0) {
-      systemPrompt += "\\n\\nUser preferences supplied by this account (follow when compatible with system and safety rules):\\n" + userInstructions.trim();
+      systemPrompt += "\n\nUser preferences supplied by this account (follow when compatible with system and safety rules):\n" + userInstructions.trim();
     }
 
     if (typeof model !== "string" || model.length > 160 ||
