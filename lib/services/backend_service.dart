@@ -43,13 +43,26 @@ class BackendService {
     const secureStorage = FlutterSecureStorage();
     final userId = currentUser?.id;
     final personalKey = userId == null ? null : await secureStorage.read(key: 'openrouter_user_api_key_$userId');
-    final response = await client.functions.invoke('chat', body: {
-      'messages': messages,
-      if (personalKey != null && personalKey.isNotEmpty) 'openrouter_api_key': personalKey,
-      if (assistantId != null) 'assistant_id': assistantId,
-      if (supportMode) 'support_mode': true,
-      if (userInstructions != null && userInstructions.trim().isNotEmpty) 'user_instructions': userInstructions.trim(),
-    });
+    final FunctionResponse response;
+    try {
+      response = await client.functions.invoke('chat', body: {
+        'messages': messages,
+        if (personalKey != null && personalKey.isNotEmpty) 'openrouter_api_key': personalKey,
+        if (assistantId != null) 'assistant_id': assistantId,
+        if (supportMode) 'support_mode': true,
+        if (userInstructions != null && userInstructions.trim().isNotEmpty) 'user_instructions': userInstructions.trim(),
+      });
+    } on FunctionException catch (e) {
+      final details = e.details;
+      final message = details is Map && details['error'] != null
+          ? details['error'].toString()
+          : details is String && details.trim().isNotEmpty
+              ? details
+              : 'سرویس هوش مصنوعی خطای ${e.status} برگرداند.';
+      throw Exception(message);
+    } catch (e) {
+      throw Exception('ارتباط با سرور هوش مصنوعی برقرار نشد: $e');
+    }
     final data = response.data;
     if (response.status < 200 || response.status >= 300) {
       final message = data is Map && data['error'] != null
