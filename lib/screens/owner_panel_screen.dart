@@ -20,6 +20,7 @@ class _OwnerPanelScreenState extends State<OwnerPanelScreen> {
   bool _loading = true;
   bool _saving = false;
   bool _allowed = false;
+  List<Map<String, dynamic>> _assistants = [];
 
   @override
   void initState() {
@@ -41,10 +42,116 @@ class _OwnerPanelScreenState extends State<OwnerPanelScreen> {
       _price.text = config['pro_price']?.toString() ?? '';
       _duration.text = (config['pro_duration_days'] ?? 30).toString();
       _announcement.text = config['announcement']?.toString() ?? '';
+      await _loadAssistants();
     } catch (e) {
       _notify('بارگذاری تنظیمات ناموفق بود: $e');
     } finally {
       if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _loadAssistants() async {
+    final rows = await BackendService.client
+        .from('assistants')
+        .select('id,name,description,icon,system_prompt,model,is_active,sort_order')
+        .order('sort_order');
+    _assistants = rows.map((row) => Map<String, dynamic>.from(row)).toList();
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _editAssistant([Map<String, dynamic>? assistant]) async {
+    final name = TextEditingController(text: assistant?['name']?.toString() ?? '');
+    final description = TextEditingController(text: assistant?['description']?.toString() ?? '');
+    final icon = TextEditingController(text: assistant?['icon']?.toString() ?? '✨');
+    final model = TextEditingController(text: assistant?['model']?.toString() ?? 'openrouter/free');
+    final prompt = TextEditingController(text: assistant?['system_prompt']?.toString() ?? '');
+    final result = await showDialog<Map<String, String>>(
+      context: context,
+      builder: (dialogContext) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: AlertDialog(
+          title: Text(assistant == null ? 'ساخت دستیار جدید' : 'ویرایش دستیار'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(controller: name, decoration: const InputDecoration(labelText: 'نام دستیار')),
+                TextField(controller: description, decoration: const InputDecoration(labelText: 'توضیحات')),
+                TextField(controller: icon, decoration: const InputDecoration(labelText: 'ایموجی / آیکون')),
+                TextField(controller: model, decoration: const InputDecoration(labelText: 'مدل (مثلاً openrouter/free)')),
+                TextField(controller: prompt, minLines: 3, maxLines: 6,
+                  decoration: const InputDecoration(labelText: 'دستورالعمل اختصاصی دستیار')),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('لغو')),
+            ElevatedButton(
+              onPressed: () {
+                if (name.text.trim().isEmpty || prompt.text.trim().isEmpty || model.text.trim().isEmpty) return;
+                Navigator.pop(dialogContext, {
+                  'name': name.text.trim(),
+                  'description': description.text.trim(),
+                  'icon': icon.text.trim().isEmpty ? '✨' : icon.text.trim(),
+                  'model': model.text.trim(),
+                  'system_prompt': prompt.text.trim(),
+                });
+              },
+              child: const Text('ذخیره'),
+            ),
+          ],
+        ),
+      ),
+    );
+    name.dispose();
+    description.dispose();
+    icon.dispose();
+    model.dispose();
+    prompt.dispose();
+    if (result == null) return;
+    try {
+      if (assistant == null) {
+        await BackendService.client.from('assistants').insert(result);
+      } else {
+        await BackendService.client.from('assistants').update(result).eq('id', assistant['id']);
+      }
+      await _loadAssistants();
+      _notify('دستیار ذخیره شد.');
+    } catch (e) {
+      _notify('ذخیره دستیار ناموفق بود: $e');
+    }
+  }
+
+  Future<void> _toggleAssistant(Map<String, dynamic> assistant) async {
+    try {
+      await BackendService.client.from('assistants')
+          .update({'is_active': !(assistant['is_active'] == true)})
+          .eq('id', assistant['id']);
+      await _loadAssistants();
+    } catch (e) {
+      _notify('تغییر وضعیت دستیار ناموفق بود: $e');
+    }
+  }
+
+  Future<void> _deleteAssistant(Map<String, dynamic> assistant) async {
+    final yes = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('حذف دستیار'),
+        content: Text('دستیار «${assistant['name']}» حذف شود؟'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('لغو')),
+          TextButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('حذف')),
+        ],
+      ),
+    );
+    if (yes != true) return;
+    try {
+      await BackendService.client.from('assistants').delete().eq('id', assistant['id']);
+      await _loadAssistants();
+      _notify('دستیار حذف شد.');
+    } catch (e) {
+      _notify('حذف دستیار ناموفق بود: $e');
     }
   }
 
@@ -134,6 +241,50 @@ class _OwnerPanelScreenState extends State<OwnerPanelScreen> {
                       _field('قیمت پلن', _price),
                       _field('مدت پلن (روز)', _duration, keyboard: TextInputType.number),
                       _field('اعلان عمومی برای کاربران', _announcement, lines: 3),
+                      const Divider(height: 30),
+                      Row(
+                        children: [
+                          const Expanded(
+                            child: Text('مدیریت دستیارها',
+                              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                          ),
+                          IconButton(
+                            tooltip: 'افزودن دستیار',
+                            onPressed: () => _editAssistant(),
+                            icon: const Icon(Icons.add_circle_outline),
+                          ),
+                        ],
+                      ),
+                      if (_assistants.isEmpty)
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 14),
+                          child: Text('هنوز دستیار اختصاصی نساخته‌اید.',
+                            style: TextStyle(color: Colors.white60)),
+                        ),
+                      ..._assistants.map((assistant) => Card(
+                        color: const Color(0xFF211A35),
+                        child: ListTile(
+                          leading: Text(assistant['icon']?.toString() ?? '✨',
+                            style: const TextStyle(fontSize: 24)),
+                          title: Text(assistant['name']?.toString() ?? 'دستیار'),
+                          subtitle: Text(
+                            '${assistant['model']} • ${assistant['is_active'] == true ? 'فعال' : 'غیرفعال'}',
+                          ),
+                          trailing: PopupMenuButton<String>(
+                            onSelected: (value) {
+                              if (value == 'edit') _editAssistant(assistant);
+                              if (value == 'toggle') _toggleAssistant(assistant);
+                              if (value == 'delete') _deleteAssistant(assistant);
+                            },
+                            itemBuilder: (_) => [
+                              const PopupMenuItem(value: 'edit', child: Text('ویرایش')),
+                              PopupMenuItem(value: 'toggle',
+                                child: Text(assistant['is_active'] == true ? 'غیرفعال‌کردن' : 'فعال‌کردن')),
+                              const PopupMenuItem(value: 'delete', child: Text('حذف')),
+                            ],
+                          ),
+                        ),
+                      )),
                       const SizedBox(height: 8),
                       SizedBox(
                         height: 52,
