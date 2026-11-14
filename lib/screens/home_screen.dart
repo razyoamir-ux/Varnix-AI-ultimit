@@ -7,7 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../services/backend_service.dart';
 import 'chat_screen.dart';
 import 'owner_panel_screen.dart';
-import 'study_editor_screen.dart';
+import 'help_guide_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -36,11 +36,20 @@ class _HomeScreenState extends State<HomeScreen> {
     } catch (_) {} finally {
       if (mounted) setState(() => loading = false);
     }
+    if (mounted) _showFirstRunGuideIfNeeded();
     if (mounted && needsPersonalKey) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _showMissingOpenRouterKeyDialog();
       });
     }
+  }
+
+  Future<void> _showFirstRunGuideIfNeeded() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (!mounted || prefs.getBool('varnix_first_run_guide_seen') == true) return;
+    await Future<void>.delayed(const Duration(milliseconds: 350));
+    if (!mounted) return;
+    await Navigator.push(context, MaterialPageRoute(builder: (_) => const HelpGuideScreen()));
   }
 
   Future<void> _showMissingOpenRouterKeyDialog() async {
@@ -117,16 +126,16 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _tools() {
     final items = [
       ['نگارش و بازنویسی','متن را بنویس یا بهترش کن','لطفاً متن زیر را حرفه‌ای بازنویسی کن: ',Icons.edit_note],
-      ['خلاصه‌ساز','خلاصه‌کردن متن و درس','متن زیر را به‌صورت نکته‌ای خلاصه کن: ',Icons.summarize],
+      ['خلاصه‌ساز','خلاصه‌کردن متن','متن زیر را به‌صورت نکته‌ای خلاصه کن: ',Icons.summarize],
       ['مترجم','ترجمه و توضیح متن','متن زیر را ترجمه کن و توضیح بده: ',Icons.translate],
       ['ایده‌پرداز','ایده و راه‌حل','برای موضوع زیر ایده‌های کاربردی بده: ',Icons.lightbulb_outline],
       ['دستیار برنامه‌نویسی','کمک در کدنویسی','به‌عنوان دستیار برنامه‌نویسی راهنمایی‌ام کن: ',Icons.code],
-      ['دستیار درسی','توضیح مفاهیم و تمرین','مثل یک معلم، این مبحث را ساده و مرحله‌ای آموزش بده: ',Icons.school],
+
     ];
     return ListView(padding: const EdgeInsets.all(16), children: [
       const Text('ابزارهای وارنیکس', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
       ...items.map((e) => _tile(e[3] as IconData, e[0] as String, e[1] as String, () => openChat(e[2] as String))),
-      _tile(Icons.edit_document, 'دفتر تایپ و درس', 'قلم، اندازه متن و فاصله خطوط', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const StudyEditorScreen()))),
+      _tile(Icons.help_outline, 'راهنمای استفاده از وارنیکس', 'آموزش مرحله‌به‌مرحله قابلیت‌های برنامه', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const HelpGuideScreen()))),
     ]);
   }
   Widget _plans() => ListView(padding: const EdgeInsets.all(18), children: [
@@ -141,6 +150,7 @@ class _HomeScreenState extends State<HomeScreen> {
     const SizedBox(height: 12), Text(BackendService.currentUser?.email ?? 'حساب کاربری', textAlign: TextAlign.center),
     const SizedBox(height: 10), Text('پلن فعلی: ${plan == 'pro' ? 'حرفه‌ای' : 'رایگان'}', textAlign: TextAlign.center),
     if (admin) _tile(Icons.admin_panel_settings, 'پنل مالک', 'مدیریت برنامه', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const OwnerPanelScreen()))),
+    _tile(Icons.help_outline, 'راهنمای استفاده از وارنیکس', 'مشاهده دوباره آموزش چندمرحله‌ای', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const HelpGuideScreen()))),
     _tile(Icons.settings, 'تنظیمات ظاهر و فونت', 'شخصی‌سازی تجربه برنامه', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AppSettingsScreen()))),
     _tile(Icons.logout, 'خروج از حساب', 'خروج امن', () => BackendService.signOut()),
   ]);
