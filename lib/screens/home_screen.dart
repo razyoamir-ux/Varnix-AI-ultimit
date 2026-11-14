@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/backend_service.dart';
 import 'chat_screen.dart';
@@ -106,6 +107,7 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
   double size = 16, spacing = 1.5;
   String font = 'پیش‌فرض', theme = 'تیره';
   bool compact = false;
+  bool keyLoading = false;
   @override
   void initState() { super.initState(); _read(); }
   Future<void> _read() async {
@@ -113,6 +115,62 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
     if (!mounted) return;
     setState(() { size = p.getDouble('varnix_font_size') ?? 16; spacing = p.getDouble('varnix_line_spacing') ?? 1.5; font = p.getString('varnix_font') ?? 'پیش‌فرض'; theme = p.getString('varnix_theme') ?? 'تیره'; compact = p.getBool('varnix_compact') ?? false; });
   }
+  Future<void> _createOpenRouterKey() async {
+    if (keyLoading) return;
+    setState(() => keyLoading = true);
+    try {
+      final result = await BackendService.createOpenRouterUserKey();
+      if (!mounted) return;
+      final apiKey = result['key'] as String;
+      final limit = result['limit_usd']?.toString() ?? '5';
+      await showDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('کلید اختصاصی OpenRouter ساخته شد'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('این کلید فقط همین یک‌بار نمایش داده می‌شود. آن را در جای امن ذخیره کن و برای دیگران نفرست. با ساخت کلید جدید، کلید قبلی وارنیکس غیرفعال می‌شود.'),
+                const SizedBox(height: 14),
+                SelectableText(apiKey, textDirection: TextDirection.ltr),
+                const SizedBox(height: 12),
+                Text('سقف مصرف این کلید: $limit دلار'),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () async {
+                await Clipboard.setData(ClipboardData(text: apiKey));
+                if (dialogContext.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('کلید کپی شد.')),
+                  );
+                }
+              },
+              child: const Text('کپی کلید'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('متوجه شدم'),
+            ),
+          ],
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      final message = e.toString().replaceFirst('Exception: ', '');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message), duration: const Duration(seconds: 5)),
+      );
+    } finally {
+      if (mounted) setState(() => keyLoading = false);
+    }
+  }
+
   Future<void> _save() async {
     final p = await SharedPreferences.getInstance();
     await p.setDouble('varnix_font_size', size); await p.setDouble('varnix_line_spacing', spacing);
@@ -123,6 +181,32 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
   Widget build(BuildContext context) => Directionality(textDirection: TextDirection.rtl, child: Scaffold(
     appBar: AppBar(title: const Text('تنظیمات وارنیکس'), actions: [IconButton(onPressed: _save, icon: const Icon(Icons.save))]),
     body: ListView(padding: const EdgeInsets.all(18), children: [
+      Card(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Row(children: [
+                Icon(Icons.key_rounded),
+                SizedBox(width: 8),
+                Expanded(child: Text('کلید API اختصاصی OpenRouter', style: TextStyle(fontWeight: FontWeight.bold))),
+              ]),
+              const SizedBox(height: 8),
+              const Text('برای حساب خودت یک کلید API بساز و در برنامه‌ها یا ابزارهای سازگار با OpenRouter استفاده کن. کلید فقط یک‌بار نمایش داده می‌شود.'),
+              const SizedBox(height: 12),
+              FilledButton.icon(
+                onPressed: keyLoading ? null : _createOpenRouterKey,
+                icon: keyLoading
+                    ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                    : const Icon(Icons.add_link),
+                label: Text(keyLoading ? 'در حال ساخت کلید...' : 'ساخت و دریافت کلید API'),
+              ),
+            ],
+          ),
+        ),
+      ),
+      const SizedBox(height: 18),
       const Text('اندازه نوشته', style: TextStyle(fontWeight: FontWeight.bold)), Slider(value: size, min: 12, max: 30, divisions: 18, label: size.round().toString(), onChanged: (v) => setState(() => size = v)),
       const Text('فاصله خطوط', style: TextStyle(fontWeight: FontWeight.bold)), Slider(value: spacing, min: 1, max: 2.5, divisions: 6, label: spacing.toStringAsFixed(1), onChanged: (v) => setState(() => spacing = v)),
       const SizedBox(height: 8), const Text('فونت (در صورت نصب بودن فونت در دستگاه/برنامه)'), DropdownButtonFormField<String>(value: font, items: ['پیش‌فرض','Serif','Monospace'].map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(), onChanged: (v) => setState(() => font = v ?? 'پیش‌فرض')),
