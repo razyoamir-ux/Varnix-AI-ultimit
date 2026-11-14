@@ -197,7 +197,7 @@ class _ChatScreenState extends State<ChatScreen> {
       child: Scaffold(
         appBar: AppBar(
           backgroundColor: const Color(0xFF1A1030),
-          title: const Column(
+          title: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(_appName, style: TextStyle(fontWeight: FontWeight.bold)),
