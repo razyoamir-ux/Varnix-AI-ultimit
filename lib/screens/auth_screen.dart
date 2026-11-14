@@ -52,14 +52,70 @@ class _AuthScreenState extends State<AuthScreen> {
         if (mounted && result.session == null) {
           await showDialog<void>(
             context: context,
-            builder: (dialogContext) => AlertDialog(
-              title: const Text('به وارنیکس خوش آمدی!'),
-              content: const Text('از ثبت‌نامت متشکریم ❤️ حساب تو ساخته شد. لطفاً ایمیلت را تأیید کن و سپس وارد برنامه شو.'),
-              actions: [TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('ادامه'))],
+            barrierDismissible: false,
+            builder: (dialogContext) => Dialog(
+              backgroundColor: const Color(0xFF19152B),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(26)),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(24, 28, 24, 22),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 76,
+                      height: 76,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF8B5CF6), Color(0xFF4F46E5)],
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF7C3AED).withValues(alpha: 0.30),
+                            blurRadius: 24,
+                            spreadRadius: 2,
+                          ),
+                        ],
+                      ),
+                      child: const Icon(Icons.mark_email_read_rounded,
+                          color: Colors.white, size: 38),
+                    ),
+                    const SizedBox(height: 20),
+                    const Text(
+                      'فقط یک قدم تا وارنیکس!',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(fontSize: 21, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 12),
+                    const Text(
+                      'حساب کاربری‌ات ساخته شد 🎉\n'
+                      'یک ایمیل تأیید برایت فرستادیم. صندوق ورودی یا پوشه Spam را بررسی کن '
+                      'و روی دکمه «تأیید ایمیل من» بزن. بعد از آن، به‌طور خودکار به وارنیکس برمی‌گردی.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Colors.white70, height: 1.8, fontSize: 14),
+                    ),
+                    const SizedBox(height: 22),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 48,
+                      child: FilledButton(
+                        style: FilledButton.styleFrom(
+                          backgroundColor: const Color(0xFF7C3AED),
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14)),
+                        ),
+                        onPressed: () => Navigator.pop(dialogContext),
+                        child: const Text('متوجه شدم'),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
           );
         } else if (mounted) {
-          _notice('از ثبت‌نامت متشکریم؛ به وارنیکس خوش آمدی!');
+          _notice('حساب وارنیکس با موفقیت ساخته شد؛ خوش آمدی! ❤️');
         }
       } else {
         await BackendService.client.auth.signInWithPassword(email: email, password: password);
