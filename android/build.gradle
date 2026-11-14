@@ -6,8 +6,19 @@ allprojects {
 }
 
 rootProject.buildDir = '../build'
-subprojects {
-    project.buildDir = "${rootProject.buildDir}/${project.name}"
+subprojects { subproject ->
+    subproject.buildDir = "${rootProject.buildDir}/${subproject.name}"
+
+    // app_links 6.4.1 reads Flutter SDK values while its Android project is
+    // being evaluated. Expose the SDK values early for this plugin module.
+    if (subproject.name == 'app_links') {
+        subproject.ext.flutter = new Object() {
+            int compileSdkVersion = 35
+            int targetSdkVersion = 35
+            int minSdkVersion = 21
+            String ndkVersion = "27.0.12077973"
+        }
+    }
 }
 subprojects {
     project.evaluationDependsOn(':app')
