@@ -223,7 +223,7 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
                   icon: keyLoading
                       ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
                       : const Icon(Icons.login),
-                  label: Text(keyLoading ? 'در حال اتصال...' : openRouterConnected ? 'اتصال دوباره' : 'اتصال با OpenRouter'),
+                  label: Text(keyLoading ? 'در حال اتصال...' : openRouterConnected ? 'اتصال دوباره' : 'اتصال OpenRouter با Google'),
                 ),
                 if (openRouterConnected)
                   OutlinedButton.icon(
