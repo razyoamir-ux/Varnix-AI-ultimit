@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -20,7 +21,8 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int tab = 0;
   bool loading = true, admin = false;
-  String displayName = '', plan = 'free', announcement = '';
+  String displayName = '', plan = 'free', announcement = '', proPrice = '';
+  bool paymentEnabled = false, paymentLoading = false;
   @override
   void initState() { super.initState(); _load(); }
   Future<void> _load() async {
@@ -34,6 +36,8 @@ class _HomeScreenState extends State<HomeScreen> {
         displayName = p?['display_name']?.toString() ?? '';
         plan = p?['plan_code']?.toString() ?? 'free';
         announcement = c['announcement']?.toString() ?? '';
+        proPrice = c['pro_price']?.toString() ?? '';
+        paymentEnabled = c['payment_enabled'] == true;
         final prefs = await SharedPreferences.getInstance();
         final selectedProvider = prefs.getString('varnix_provider_id') ?? 'openrouter';
         const secure = FlutterSecureStorage();
@@ -105,6 +109,35 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
+  Future<void> _buyPro() async {
+    if (paymentLoading) return;
+    setState(() => paymentLoading = true);
+    try {
+      final paymentUrl = await BackendService.createNextpayPayment();
+      final launched = await launchUrl(Uri.parse(paymentUrl), mode: LaunchMode.externalApplication);
+      if (!launched) throw Exception('باز کردن صفحه پرداخت ممکن نشد.');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('پس از پرداخت به وارنیکس برگرد و وضعیت اشتراک را تازه‌سازی کن.')),
+        );
+      }
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+      );
+    } finally {
+      if (mounted) setState(() => paymentLoading = false);
+    }
+  }
+
+  Future<void> _refreshPlan() async {
+    final user = BackendService.currentUser;
+    if (user == null) return;
+    final row = await BackendService.client.from('profiles')
+        .select('plan_code').eq('id', user.id).maybeSingle();
+    if (mounted) setState(() => plan = row?['plan_code']?.toString() ?? 'free');
+  }
+
   void openChat([String? prompt]) => Navigator.push(context, MaterialPageRoute(builder: (_) => ChatScreen(initialPrompt: prompt)));
   void openSupportAssistant() => Navigator.push(context, MaterialPageRoute(builder: (_) => const ChatScreen(supportMode: true)));
   @override
@@ -155,11 +188,20 @@ class _HomeScreenState extends State<HomeScreen> {
     const Text('پلن‌های وارنیکس', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
     const SizedBox(height: 12),
     _planCard('رایگان', '۰ تومان', '۲۰ درخواست در روز • حداکثر ۱٬۰۲۴ توکن برای هر پاسخ • دسترسی پایه', plan == 'free'),
-    _planCard('پرو', 'اشتراک پولی', '۱۰۰ درخواست در روز • حداکثر ۲٬۰۴۸ توکن برای هر پاسخ • مناسب استفاده روزمره', plan == 'pro'),
+    _planCard('پرو', proPrice.isEmpty ? 'قیمت در حال تنظیم' : '$proPrice تومان', '۱۰۰ درخواست در روز • حداکثر ۲٬۰۴۸ توکن برای هر پاسخ • مناسب استفاده روزمره', plan == 'pro'),
+    if (paymentEnabled && plan != 'pro') ...[
+      const SizedBox(height: 8),
+      SizedBox(width: double.infinity, child: FilledButton.icon(
+        onPressed: paymentLoading ? null : _buyPro,
+        icon: paymentLoading ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.payment),
+        label: Text(paymentLoading ? 'در حال ساخت پرداخت...' : 'خرید اشتراک پرو با نکست‌پی'),
+      )),
+    ],
+    OutlinedButton.icon(onPressed: _refreshPlan, icon: const Icon(Icons.refresh), label: const Text('تازه‌سازی وضعیت اشتراک')),
     _planCard('پرو مکس', 'اشتراک پولی', '۳۰۰ درخواست در روز • حداکثر ۴٬۰۹۶ توکن برای هر پاسخ • استفاده سنگین‌تر', plan == 'pro_max'),
     _planCard('اولترا مکس', 'اشتراک پولی', '۸۰۰ درخواست در روز • حداکثر ۸٬۱۹۲ توکن برای هر پاسخ • بالاترین سهمیه', plan == 'ultra_max'),
     const SizedBox(height: 8),
-    const Text('سهمیه‌ها در سرور کنترل می‌شوند و هر روز در ساعت ۰۰:۰۰ UTC بازنشانی می‌شوند. خرید پلن‌های پولی تا فعال‌شدن درگاه پرداخت در دسترس نیست.', style: TextStyle(color: Colors.white60)),
+    const Text('سهمیه‌ها در سرور کنترل می‌شوند. پرداخت از طریق درگاه امن نکست‌پی انجام می‌شود و اشتراک پس از تأیید بانکی فعال خواهد شد.', style: TextStyle(color: Colors.white60)),
   ]);
   Widget _account() => ListView(padding: const EdgeInsets.all(18), children: [
     const CircleAvatar(radius: 34, child: Icon(Icons.person, size: 36)),
