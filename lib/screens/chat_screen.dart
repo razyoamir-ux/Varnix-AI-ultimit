@@ -17,6 +17,10 @@ class _ChatScreenState extends State<ChatScreen> {
   final _scroll = ScrollController();
   final List<ChatMessage> _messages = [];
   List<Map<String, dynamic>> _conversations = [];
+  List<Map<String, dynamic>> _assistants = [];
+  String? _selectedAssistantId;
+  String _selectedAssistantName = 'وارنیکس';
+  String _selectedAssistantIcon = '✨';
   String? _conversationId;
   bool _loading = true;
   bool _sending = false;
@@ -37,6 +41,12 @@ class _ChatScreenState extends State<ChatScreen> {
       final config = await BackendService.loadAppConfig();
       _appName = config['app_name']?.toString() ?? 'Varnix AI';
       _announcement = config['announcement']?.toString() ?? '';
+      final assistantRows = await BackendService.client
+          .from('assistants')
+          .select('id,name,icon')
+          .eq('is_active', true)
+          .order('sort_order');
+      _assistants = assistantRows.map((row) => Map<String, dynamic>.from(row)).toList();
       _configChannel = BackendService.client
           .channel('varnix-app-config')
           .onPostgresChanges(
@@ -170,7 +180,7 @@ class _ChatScreenState extends State<ChatScreen> {
       final history = _messages
           .map((m) => <String, String>{'role': m.role, 'content': m.content})
           .toList();
-      final answer = await BackendService.sendChat(messages: history);
+      final answer = await BackendService.sendChat(messages: history, assistantId: _selectedAssistantId);
       final saved = await BackendService.client.from('messages').insert({
         'conversation_id': conversationId,
         'user_id': user.id,
@@ -292,10 +302,35 @@ class _ChatScreenState extends State<ChatScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(_appName, style: TextStyle(fontWeight: FontWeight.bold)),
-              Text('دستیار هوشمند شما', style: TextStyle(fontSize: 11, color: Colors.white60)),
+              Text('$_selectedAssistantIcon $_selectedAssistantName', style: const TextStyle(fontSize: 11, color: Colors.white60)),
             ],
           ),
           actions: [
+            PopupMenuButton<String>(
+              tooltip: 'انتخاب دستیار',
+              icon: const Icon(Icons.smart_toy_outlined),
+              onSelected: (value) {
+                setState(() {
+                  if (value == '__default__') {
+                    _selectedAssistantId = null;
+                    _selectedAssistantName = 'وارنیکس';
+                    _selectedAssistantIcon = '✨';
+                  } else {
+                    final assistant = _assistants.firstWhere((a) => a['id'].toString() == value);
+                    _selectedAssistantId = value;
+                    _selectedAssistantName = assistant['name']?.toString() ?? 'دستیار';
+                    _selectedAssistantIcon = assistant['icon']?.toString() ?? '✨';
+                  }
+                });
+              },
+              itemBuilder: (_) => [
+                const PopupMenuItem(value: '__default__', child: Text('✨ وارنیکس (پیش‌فرض)')),
+                ..._assistants.map((assistant) => PopupMenuItem(
+                  value: assistant['id'].toString(),
+                  child: Text('${assistant['icon'] ?? '✨'} ${assistant['name'] ?? 'دستیار'}'),
+                )),
+              ],
+            ),
             IconButton(tooltip: 'گفتگوی جدید', onPressed: _newConversation,
               icon: const Icon(Icons.add_comment_outlined)),
             PopupMenuButton<String>(
