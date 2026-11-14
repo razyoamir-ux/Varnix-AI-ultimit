@@ -53,7 +53,7 @@ serve(async (req) => {
     );
     if (reserveError) return json({ error: "Could not reserve API key issuance" }, 503);
     if (reserved !== true) {
-      return json({ error: "برای جلوگیری از ساخت کلیدهای متعدد، هر ۵ دقیقه فقط یک‌بار می‌توان کلید جدید ساخت." }, 429);
+      return json({ error: "برای جلوگیری از ساخت کلیدهای متعدد، هر ۲۴ ساعت فقط یک‌بار می‌توان کلید جدید ساخت." }, 429);
     }
 
     const { data: previous, error: previousError } = await service
