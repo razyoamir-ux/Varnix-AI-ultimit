@@ -22,6 +22,70 @@ class _OwnerPanelScreenState extends State<OwnerPanelScreen> {
   bool _allowed = false;
   List<Map<String, dynamic>> _assistants = [];
   List<Map<String, dynamic>> _users = [];
+  List<Map<String, dynamic>> _purchases = [];
+  List<Map<String, dynamic>> _conversations = [];
+
+  Future<void> _loadPurchases() async {
+    final rows = await BackendService.client
+        .from('purchases')
+        .select('id,user_id,plan_code,amount,currency,provider,provider_reference,status,created_at,verified_at')
+        .order('created_at', ascending: false)
+        .limit(500);
+    _purchases = rows.map((row) => Map<String, dynamic>.from(row)).toList();
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _loadConversations() async {
+    final rows = await BackendService.client
+        .from('conversations')
+        .select('id,user_id,title,created_at,updated_at')
+        .order('updated_at', ascending: false)
+        .limit(100);
+    _conversations = rows.map((row) => Map<String, dynamic>.from(row)).toList();
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _showConversation(Map<String, dynamic> conversation) async {
+    try {
+      final rows = await BackendService.client
+          .from('messages')
+          .select('role,content,created_at')
+          .eq('conversation_id', conversation['id'])
+          .order('created_at')
+          .limit(200);
+      if (!mounted) return;
+      await showDialog<void>(
+        context: context,
+        builder: (dialogContext) => Directionality(
+          textDirection: TextDirection.rtl,
+          child: AlertDialog(
+            title: Text(conversation['title']?.toString() ?? 'گفتگو'),
+            content: SizedBox(
+              width: double.maxFinite,
+              child: ListView.builder(
+                shrinkWrap: true,
+                itemCount: rows.length,
+                itemBuilder: (_, index) {
+                  final message = rows[index];
+                  return ListTile(
+                    dense: true,
+                    title: Text(message['role'] == 'user' ? 'کاربر' : 'وارنیکس'),
+                    subtitle: SelectableText(message['content']?.toString() ?? ''),
+                  );
+                },
+              ),
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('بستن')),
+            ],
+          ),
+        ),
+      );
+    } catch (e) {
+      _notify('نمایش گفتگو ناموفق بود: $e');
+    }
+  }
+
 
   @override
   void initState() {
@@ -45,6 +109,8 @@ class _OwnerPanelScreenState extends State<OwnerPanelScreen> {
       _announcement.text = config['announcement']?.toString() ?? '';
       await _loadAssistants();
       await _loadUsers();
+      await _loadPurchases();
+      await _loadConversations();
     } catch (e) {
       _notify('بارگذاری تنظیمات ناموفق بود: $e');
     } finally {
@@ -325,6 +391,47 @@ class _OwnerPanelScreenState extends State<OwnerPanelScreen> {
                           ),
                         ),
                       )),
+
+                      const Divider(height: 30),
+                      Row(
+                        children: [
+                          const Expanded(child: Text('مدیریت خریدها',
+                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold))),
+                          IconButton(onPressed: _loadPurchases, icon: const Icon(Icons.refresh)),
+                        ],
+                      ),
+                      if (_purchases.isEmpty)
+                        const Text('هنوز خریدی ثبت نشده است.'),
+                      ..._purchases.map((purchase) => Card(
+                        child: ListTile(
+                          title: Text('${purchase['plan_code']} • ${purchase['amount']} ${purchase['currency']}'),
+                          subtitle: Text('کاربر: ${purchase['user_id']}\nوضعیت: ${purchase['status']} • ${purchase['provider']}',
+                            maxLines: 2, overflow: TextOverflow.ellipsis),
+                          isThreeLine: true,
+                        ),
+                      )),
+                      const Divider(height: 30),
+                      Row(
+                        children: [
+                          const Expanded(child: Text('گفتگوهای کاربران',
+                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold))),
+                          IconButton(onPressed: _loadConversations, icon: const Icon(Icons.refresh)),
+                        ],
+                      ),
+                      if (_conversations.isEmpty)
+                        const Text('گفتگویی برای نمایش وجود ندارد.'),
+                      ..._conversations.map((conversation) => Card(
+                        child: ListTile(
+                          title: Text(conversation['title']?.toString() ?? 'گفتگوی جدید'),
+                          subtitle: Text('شناسه کاربر: ${conversation['user_id']}'),
+                          trailing: IconButton(
+                            tooltip: 'مشاهده پیام‌ها',
+                            icon: const Icon(Icons.visibility_outlined),
+                            onPressed: () => _showConversation(conversation),
+                          ),
+                        ),
+                      )),
+
                       const Divider(height: 30),
                       Row(
                         children: [
