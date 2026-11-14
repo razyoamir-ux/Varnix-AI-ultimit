@@ -50,14 +50,32 @@ serve(async (req) => {
       return json({ error: "Invalid JSON body" }, 400);
     }
 
-    const suppliedUserKey = payload?.openrouter_api_key;
+    const providers: Record<string, { baseUrl: string }> = {
+      openrouter: { baseUrl: "https://openrouter.ai/api/v1" },
+      groq: { baseUrl: "https://api.groq.com/openai/v1" },
+      gemini: { baseUrl: "https://generativelanguage.googleapis.com/v1beta/openai" },
+      mistral: { baseUrl: "https://api.mistral.ai/v1" },
+      deepseek: { baseUrl: "https://api.deepseek.com/v1" },
+      together: { baseUrl: "https://api.together.xyz/v1" },
+      fireworks: { baseUrl: "https://api.fireworks.ai/inference/v1" },
+      cerebras: { baseUrl: "https://api.cerebras.ai/v1" },
+      deepinfra: { baseUrl: "https://api.deepinfra.com/v1/openai" },
+      cohere: { baseUrl: "https://api.cohere.ai/compatibility/v1" },
+      novita: { baseUrl: "https://api.novita.ai/openai/v1" },
+      nvidia: { baseUrl: "https://integrate.api.nvidia.com/v1" },
+      xai: { baseUrl: "https://api.x.ai/v1" },
+    };
+    const providerId = typeof payload?.provider_id === "string" ? payload.provider_id : "openrouter";
+    const provider = providers[providerId];
+    if (!provider) return json({ error: "AI provider is not supported" }, 400);
+    const suppliedUserKey = providerId === "openrouter" ? payload?.openrouter_api_key : payload?.provider_api_key;
     if (suppliedUserKey !== undefined &&
-        (typeof suppliedUserKey !== "string" || !suppliedUserKey.startsWith("sk-or-") || suppliedUserKey.length > 512)) {
-      return json({ error: "Personal OpenRouter key is invalid" }, 400);
+        (typeof suppliedUserKey !== "string" || suppliedUserKey.trim().length < 8 || suppliedUserKey.length > 512)) {
+      return json({ error: "کلید API واردشده معتبر نیست." }, 400);
     }
-    const openRouterKey = suppliedUserKey || serverOpenRouterKey;
+    const openRouterKey = providerId === "openrouter" ? (suppliedUserKey || serverOpenRouterKey) : suppliedUserKey;
     if (!openRouterKey) {
-      return json({ error: "برای استفاده از هوش مصنوعی، ابتدا حساب OpenRouter را متصل کن." }, 503);
+      return json({ error: "برای این سرویس ابتدا کلید API شخصی خودت را در تنظیمات وارد کن." }, 503);
     }
 
     const incoming = payload?.messages;
@@ -89,6 +107,9 @@ serve(async (req) => {
     if (configError) return json({ error: "Could not load app configuration" }, 503);
 
     let model = config?.default_model ?? "openrouter/free";
+    if (typeof payload.model === "string" && payload.model.trim().length > 0 && payload.model.length <= 160) {
+      model = payload.model.trim();
+    }
     let systemPrompt = config?.system_prompt ?? "تو یک دستیار هوشمند فارسی‌زبان به نام وارنیکس هستی.";
     if (typeof payload.assistant_id === "string" && payload.assistant_id.length <= 80) {
       const { data: assistant, error: assistantError } = await supabase
@@ -140,15 +161,7 @@ serve(async (req) => {
       }, 429);
     }
 
-    const baseUrl = new URL(config?.api_base_url ?? "https://openrouter.ai/api/v1");
-    // This release supports OpenRouter only. Restrict the host to prevent
-    // admin misconfiguration from turning this proxy into an arbitrary fetcher.
-    if (baseUrl.protocol !== "https:" || baseUrl.hostname !== "openrouter.ai" ||
-        baseUrl.username || baseUrl.password) {
-      return json({ error: "Unsupported AI provider URL" }, 503);
-    }
-
-    const upstream = await fetch(new URL("/api/v1/chat/completions", baseUrl.origin), {
+    const upstream = await fetch(new URL(provider.baseUrl + "/chat/completions"), {
       method: "POST",
       headers: {
         "Authorization": "Bearer " + openRouterKey,
