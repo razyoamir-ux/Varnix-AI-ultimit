@@ -97,7 +97,8 @@ class _ChatScreenState extends State<ChatScreen> {
 
   Future<void> _loadConversation() async {
     try {
-      _isAdmin = await BackendService.isCurrentUserAdmin();\n      if (widget.supportMode) { _selectedAssistantName = 'دستیار راهنمای وارنیکس'; _selectedAssistantIcon = '🛟'; }
+      _isAdmin = await BackendService.isCurrentUserAdmin();
+      if (widget.supportMode) { _selectedAssistantName = 'دستیار راهنمای وارنیکس'; _selectedAssistantIcon = '🛟'; }
       final config = await BackendService.loadAppConfig();
       _appName = config['app_name']?.toString() ?? 'Varnix AI';
       _announcement = config['announcement']?.toString() ?? '';
