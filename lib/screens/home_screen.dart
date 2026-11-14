@@ -133,7 +133,7 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('این کلید فقط همین یک‌بار نمایش داده می‌شود. آن را در جای امن ذخیره کن و برای دیگران نفرست. با ساخت کلید جدید، کلید قبلی وارنیکس غیرفعال می‌شود.'),
+                const Text('این کلید فقط همین یک‌بار نمایش داده می‌شود. آن را در جای امن ذخیره کن و برای دیگران نفرست. ساخت کلید جدید، کلید قبلی وارنیکس را غیرفعال می‌کند. مصرف از اعتبار OpenRouter وارنیکس کم می‌شود.'),
                 const SizedBox(height: 14),
                 SelectableText(apiKey, textDirection: TextDirection.ltr),
                 const SizedBox(height: 12),
@@ -193,7 +193,7 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
                 Expanded(child: Text('کلید API اختصاصی OpenRouter', style: TextStyle(fontWeight: FontWeight.bold))),
               ]),
               const SizedBox(height: 8),
-              const Text('برای حساب خودت یک کلید API بساز و در برنامه‌ها یا ابزارهای سازگار با OpenRouter استفاده کن. کلید فقط یک‌بار نمایش داده می‌شود.'),
+              const Text('یک کلید اختصاصی از حساب OpenRouter وارنیکس دریافت کن و در ابزارهای سازگار استفاده کن. سقف پیش‌فرض روزانه ۱ دلار است و ساخت کلید جدید هر ۲۴ ساعت یک‌بار ممکن است. هزینه از اعتبار وارنیکس کم می‌شود.'),
               const SizedBox(height: 12),
               FilledButton.icon(
                 onPressed: keyLoading ? null : _createOpenRouterKey,
