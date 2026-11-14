@@ -16,6 +16,7 @@ class _ChatScreenState extends State<ChatScreen> {
   final _controller = TextEditingController();
   final _scroll = ScrollController();
   final List<ChatMessage> _messages = [];
+  List<Map<String, dynamic>> _conversations = [];
   String? _conversationId;
   bool _loading = true;
   bool _sending = false;
@@ -52,13 +53,9 @@ class _ChatScreenState extends State<ChatScreen> {
             },
           )
           .subscribe();
-      final rows = await BackendService.client
-          .from('conversations')
-          .select('id')
-          .order('updated_at', ascending: false)
-          .limit(1);
-      if (rows.isNotEmpty) {
-        _conversationId = rows.first['id'] as String;
+      await _refreshConversations();
+      if (_conversations.isNotEmpty) {
+        _conversationId = _conversations.first['id'] as String;
         final stored = await BackendService.client
             .from('messages')
             .select('id,role,content,created_at')
@@ -83,6 +80,44 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
+  Future<void> _refreshConversations() async {
+    final rows = await BackendService.client
+        .from('conversations')
+        .select('id,title,updated_at')
+        .order('updated_at', ascending: false);
+    _conversations = rows.map((row) => Map<String, dynamic>.from(row)).toList();
+  }
+
+  Future<void> _openConversation(String id) async {
+    Navigator.of(context).pop();
+    setState(() {
+      _loading = true;
+      _conversationId = id;
+      _messages.clear();
+    });
+    try {
+      final stored = await BackendService.client
+          .from('messages')
+          .select('id,role,content,created_at')
+          .eq('conversation_id', id)
+          .order('created_at');
+      if (!mounted) return;
+      setState(() {
+        _messages.addAll(stored.map((row) => ChatMessage(
+          id: row['id'].toString(),
+          role: row['role'].toString(),
+          content: row['content'].toString(),
+          timestamp: DateTime.parse(row['created_at'].toString()).toLocal(),
+        )));
+        _loading = false;
+      });
+      _scrollToBottom();
+    } catch (e) {
+      if (mounted) setState(() => _loading = false);
+      _showError('بازکردن گفتگو ناموفق بود: $e');
+    }
+  }
+
   Future<String> _ensureConversation(String firstMessage) async {
     if (_conversationId != null) return _conversationId!;
     final row = await BackendService.client.from('conversations').insert({
@@ -90,6 +125,8 @@ class _ChatScreenState extends State<ChatScreen> {
       'title': firstMessage.length > 48 ? '${firstMessage.substring(0, 48)}…' : firstMessage,
     }).select('id').single();
     _conversationId = row['id'] as String;
+    await _refreshConversations();
+    if (mounted) setState(() {});
     return _conversationId!;
   }
 
@@ -154,6 +191,8 @@ class _ChatScreenState extends State<ChatScreen> {
       await BackendService.client.from('conversations')
           .update({'updated_at': DateTime.now().toUtc().toIso8601String()})
           .eq('id', conversationId);
+      await _refreshConversations();
+      if (mounted) setState(() {});
     } catch (e) {
       if (!mounted) return;
       setState(() => _sending = false);
@@ -163,6 +202,7 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Future<void> _newConversation() async {
+    if (Navigator.of(context).canPop()) Navigator.of(context).pop();
     setState(() {
       _conversationId = null;
       _messages.clear();
@@ -195,6 +235,57 @@ class _ChatScreenState extends State<ChatScreen> {
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
+        drawer: Drawer(
+          backgroundColor: const Color(0xFF171326),
+          child: SafeArea(
+            child: Column(
+              children: [
+                const Padding(
+                  padding: EdgeInsets.fromLTRB(18, 24, 18, 18),
+                  child: Row(
+                    children: [
+                      Icon(Icons.auto_awesome, color: Color(0xFFA78BFA), size: 30),
+                      SizedBox(width: 12),
+                      Text('گفتگوهای وارنیکس',
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                    ],
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: _newConversation,
+                      icon: const Icon(Icons.add),
+                      label: const Text('گفتگوی جدید'),
+                    ),
+                  ),
+                ),
+                const Divider(height: 24),
+                Expanded(
+                  child: _conversations.isEmpty
+                      ? const Center(child: Text('هنوز گفتگویی ندارید',
+                          style: TextStyle(color: Colors.white54)))
+                      : ListView.builder(
+                          itemCount: _conversations.length,
+                          itemBuilder: (context, index) {
+                            final item = _conversations[index];
+                            final id = item['id'].toString();
+                            return ListTile(
+                              selected: id == _conversationId,
+                              leading: const Icon(Icons.chat_bubble_outline, size: 20),
+                              title: Text(item['title']?.toString() ?? 'گفتگوی جدید',
+                                maxLines: 1, overflow: TextOverflow.ellipsis),
+                              onTap: () => _openConversation(id),
+                            );
+                          },
+                        ),
+                ),
+              ],
+            ),
+          ),
+        ),
         appBar: AppBar(
           backgroundColor: const Color(0xFF1A1030),
           title: Column(
