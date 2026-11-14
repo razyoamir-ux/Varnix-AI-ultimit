@@ -87,19 +87,26 @@ class _ChatScreenState extends State<ChatScreen> {
 
     try {
       final conversationId = await _ensureConversation(text);
-      await BackendService.client.from('messages').insert({
+      final localUserId = _messages.last.id;
+      final savedUser = await BackendService.client.from('messages').insert({
         'conversation_id': conversationId,
         'user_id': user.id,
         'role': 'user',
         'content': text,
-      });
+      }).select('id,created_at').single();
+      final localIndex = _messages.indexWhere((m) => m.id == localUserId);
+      if (localIndex >= 0) {
+        _messages[localIndex] = ChatMessage(
+          id: savedUser['id'].toString(),
+          role: 'user',
+          content: text,
+          timestamp: DateTime.parse(savedUser['created_at'].toString()).toLocal(),
+        );
+      }
 
       final history = _messages
-          .where((m) => !m.id.startsWith('local-'))
           .map((m) => <String, String>{'role': m.role, 'content': m.content})
           .toList();
-      // Include the current user message; older messages are sent as context.
-      history.add({'role': 'user', 'content': text});
       final answer = await BackendService.sendChat(messages: history);
       final saved = await BackendService.client.from('messages').insert({
         'conversation_id': conversationId,
