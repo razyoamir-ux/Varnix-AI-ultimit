@@ -5,11 +5,13 @@ import '../models/chat_message.dart';
 class MessageBubble extends StatelessWidget {
   final ChatMessage message;
   final bool isUser;
+  final VoidCallback? onRegenerate;
 
   const MessageBubble({
     super.key,
     required this.message,
     required this.isUser,
+    this.onRegenerate,
   });
 
   @override
@@ -92,6 +94,17 @@ class MessageBubble extends StatelessWidget {
                     color: Colors.white.withOpacity(0.4),
                   ),
                 ),
+                if (onRegenerate != null) ...[
+                  const SizedBox(width: 10),
+                  GestureDetector(
+                    onTap: onRegenerate,
+                    child: Icon(
+                      Icons.refresh_rounded,
+                      size: 16,
+                      color: Colors.white.withOpacity(0.55),
+                    ),
+                  ),
+                ],
               ],
             ),
           ],
