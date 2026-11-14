@@ -17,7 +17,7 @@ Future<void> main() async {
   ));
   final configured = _supabaseUrl.startsWith('https://') && _supabaseAnonKey.isNotEmpty;
   if (configured) {
-    await Supabase.initialize(url: _supabaseUrl, anonKey: _supabaseAnonKey);
+    await Supabase.initialize(url: _supabaseUrl, publishableKey: _supabaseAnonKey);
   }
   runApp(VarnixApp(configured: configured));
 }
