@@ -64,7 +64,7 @@ class _HelpGuideScreenState extends State<HelpGuideScreen> {
                         width: 116, height: 116,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: const Color(0xFF7C3AED).withValues(alpha: .18),
+                          color: const Color(0xFF7C3AED).withOpacity(.18),
                         ),
                         child: Icon(step.icon, size: 58, color: const Color(0xFFC4B5FD)),
                       ),
