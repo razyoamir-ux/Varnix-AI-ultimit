@@ -201,6 +201,14 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
     'novita': {'name': 'Novita AI', 'url': 'https://api.novita.ai/openai/v1'},
     'nvidia': {'name': 'NVIDIA NIM', 'url': 'https://integrate.api.nvidia.com/v1'},
     'xai': {'name': 'xAI (Grok)', 'url': 'https://api.x.ai/v1'},
+    'openai': {'name': 'OpenAI', 'url': 'https://api.openai.com/v1'},
+    'qwen': {'name': 'Qwen / Alibaba DashScope', 'url': 'https://dashscope-intl.aliyuncs.com/compatible-mode/v1'},
+    'zai': {'name': 'Z.AI / GLM', 'url': 'https://api.z.ai/api/paas/v4'},
+    'moonshot': {'name': 'Moonshot / Kimi', 'url': 'https://api.moonshot.ai/v1'},
+    'huggingface': {'name': 'Hugging Face', 'url': 'https://router.huggingface.co/v1'},
+    'sambanova': {'name': 'SambaNova', 'url': 'https://api.sambanova.ai/v1'},
+    'siliconflow': {'name': 'SiliconFlow', 'url': 'https://api.siliconflow.com/v1'},
+    'minimax': {'name': 'MiniMax', 'url': 'https://api.minimax.io/v1'},
   };
   StreamSubscription<Uri>? _linkSubscription;
   final AppLinks _appLinks = AppLinks();
