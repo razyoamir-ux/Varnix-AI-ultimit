@@ -126,7 +126,7 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
   }
 
   Future<void> _loadOpenRouterStatus() async {
-    final connected = await OpenRouterAuthService.isConnected;
+    final connected = await OpenRouterAuthService.isConnected(BackendService.currentUser!.id);
     if (mounted) setState(() => openRouterConnected = connected);
   }
 
@@ -140,7 +140,7 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
     if (uri.scheme != 'com.varnix.ai' || uri.host != 'login-callback') return;
     if (mounted) setState(() => keyLoading = true);
     try {
-      await OpenRouterAuthService.handleCallback(uri);
+      await OpenRouterAuthService.handleCallback(uri, BackendService.currentUser!.id);
       if (!mounted) return;
       setState(() => openRouterConnected = true);
       ScaffoldMessenger.of(context).showSnackBar(
@@ -159,7 +159,7 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
     if (keyLoading) return;
     setState(() => keyLoading = true);
     try {
-      await OpenRouterAuthService.beginAuthorization();
+      await OpenRouterAuthService.beginAuthorization(BackendService.currentUser!.id);
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
@@ -170,7 +170,7 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
   }
 
   Future<void> _disconnectOpenRouter() async {
-    await OpenRouterAuthService.disconnect();
+    await OpenRouterAuthService.disconnect(BackendService.currentUser!.id);
     if (mounted) setState(() => openRouterConnected = false);
   }
   Future<void> _read() async {
