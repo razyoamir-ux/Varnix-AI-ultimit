@@ -21,6 +21,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() { super.initState(); _load(); }
   Future<void> _load() async {
+    var needsPersonalKey = false;
     try {
       final user = BackendService.currentUser;
       if (user != null) {
@@ -30,8 +31,57 @@ class _HomeScreenState extends State<HomeScreen> {
         displayName = p?['display_name']?.toString() ?? '';
         plan = p?['plan_code']?.toString() ?? 'free';
         announcement = c['announcement']?.toString() ?? '';
+        needsPersonalKey = !await OpenRouterAuthService.isConnected(user.id);
       }
-    } catch (_) {} finally { if (mounted) setState(() => loading = false); }
+    } catch (_) {} finally {
+      if (mounted) setState(() => loading = false);
+    }
+    if (mounted && needsPersonalKey) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _showMissingOpenRouterKeyDialog();
+      });
+    }
+  }
+
+  Future<void> _showMissingOpenRouterKeyDialog() async {
+    if (!mounted) return;
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: const Color(0xFF201A35),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+        title: const Row(
+          children: [
+            Icon(Icons.key_off_rounded, color: Color(0xFFC4B5FD)),
+            SizedBox(width: 10),
+            Expanded(child: Text('کلید شخصی OpenRouter نداری')),
+          ],
+        ),
+        content: const Text(
+          'برای استفاده از حساب شخصی هوش مصنوعی، هنوز حساب OpenRouter را به وارنیکس وصل نکرده‌ای. '
+          'می‌توانی همین حالا از داخل برنامه وارد OpenRouter شوی یا ثبت‌نام کنی؛ '
+          'پس از تأیید دسترسی، کلید API به‌صورت خودکار و امن در برنامه ذخیره می‌شود.',
+          style: TextStyle(height: 1.7),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('فعلاً نه'),
+          ),
+          FilledButton.icon(
+            onPressed: () {
+              Navigator.pop(dialogContext);
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const AppSettingsScreen()),
+              );
+            },
+            icon: const Icon(Icons.link_rounded),
+            label: const Text('اتصال حساب OpenRouter'),
+          ),
+        ],
+      ),
+    );
   }
   void openChat([String? prompt]) => Navigator.push(context, MaterialPageRoute(builder: (_) => ChatScreen(initialPrompt: prompt)));
   void openSupportAssistant() => Navigator.push(context, MaterialPageRoute(builder: (_) => const ChatScreen(supportMode: true)));
