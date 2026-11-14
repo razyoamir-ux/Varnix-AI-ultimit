@@ -36,6 +36,6 @@ The current app build reads those values through Dart compile-time defines. If t
 
 ## Auth and owner setup
 - In Supabase **Authentication → URL Configuration**, set the site URL and allowed redirect URLs for your app's password recovery flow.
-- Configure the email provider and decide whether email confirmation is required.
+- Configure the email provider and decide whether email confirmation is required. Add `com.varnix.ai://login-callback/` to the Supabase Auth allowed redirect URLs for email confirmation and password recovery.
 - Register your own account in the app first. Then, in the Supabase SQL Editor, run an update setting only that account's `profiles.role` to `admin`.
 - Never put the OpenRouter API key or Supabase service-role key in GitHub repository files, Flutter build arguments, or chat messages. Add only `OPENROUTER_API_KEY` to the Supabase Edge Function secrets.
