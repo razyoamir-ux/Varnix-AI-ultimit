@@ -16,11 +16,27 @@ class _OwnerPanelScreenState extends State<OwnerPanelScreen> {
   final _myket = TextEditingController();
   final _price = TextEditingController();
   final _duration = TextEditingController();
+  final _basePrice = TextEditingController();
+  final _freeMessages = TextEditingController();
+  final _freeImages = TextEditingController();
+  final _freeFiles = TextEditingController();
+  final _freeVideos = TextEditingController();
+  final _freeEconomicVoice = TextEditingController();
+  final _freeAdvancedVoice = TextEditingController();
+  final _proImages = TextEditingController();
+  final _proVideos = TextEditingController();
+  final _bannerUnit = TextEditingController();
+  final _interstitialUnit = TextEditingController();
+  final _rewardedUnit = TextEditingController();
   final _announcement = TextEditingController();
   bool _loading = true;
   bool _saving = false;
   bool _allowed = false;
   bool _paymentEnabled = false;
+  bool _adsEnabled = true;
+  bool _bannerEnabled = true;
+  bool _interstitialEnabled = false;
+  bool _rewardedEnabled = false;
   List<Map<String, dynamic>> _assistants = [];
   List<Map<String, dynamic>> _users = [];
   List<Map<String, dynamic>> _purchases = [];
@@ -105,8 +121,24 @@ class _OwnerPanelScreenState extends State<OwnerPanelScreen> {
       _prompt.text = config['system_prompt']?.toString() ?? '';
       _rubika.text = config['rubika_url']?.toString() ?? '';
       _myket.text = config['myket_url']?.toString() ?? '';
-      _price.text = config['pro_price']?.toString() ?? '';
+      _price.text = config['pro_price']?.toString() ?? '136000';
+      _basePrice.text = (config['pro_base_price'] ?? 120000).toString();
       _duration.text = (config['pro_duration_days'] ?? 30).toString();
+      _freeMessages.text = (config['free_daily_message_limit'] ?? 30).toString();
+      _freeImages.text = (config['free_daily_image_limit'] ?? 3).toString();
+      _freeFiles.text = (config['free_daily_file_limit'] ?? 2).toString();
+      _freeVideos.text = (config['free_daily_video_limit'] ?? 1).toString();
+      _freeEconomicVoice.text = (config['free_voice_economic_minutes'] ?? 5).toString();
+      _freeAdvancedVoice.text = (config['free_voice_advanced_minutes'] ?? 2).toString();
+      _proImages.text = (config['pro_daily_image_generation_limit'] ?? 10).toString();
+      _proVideos.text = (config['pro_daily_video_generation_limit'] ?? 2).toString();
+      _bannerUnit.text = config['ad_banner_unit_id']?.toString() ?? '';
+      _interstitialUnit.text = config['ad_interstitial_unit_id']?.toString() ?? '';
+      _rewardedUnit.text = config['ad_rewarded_unit_id']?.toString() ?? '';
+      _adsEnabled = config['ads_enabled'] != false;
+      _bannerEnabled = config['ad_banner_enabled'] == true;
+      _interstitialEnabled = config['ad_interstitial_enabled'] == true;
+      _rewardedEnabled = config['ad_rewarded_enabled'] == true;
       _announcement.text = config['announcement']?.toString() ?? '';
       _paymentEnabled = config['payment_enabled'] == true;
       await _loadAssistants();
@@ -262,6 +294,21 @@ class _OwnerPanelScreenState extends State<OwnerPanelScreen> {
 
   Future<void> _save() async {
     final days = int.tryParse(_duration.text.trim());
+    final basePrice = int.tryParse(_basePrice.text.trim());
+    final proPrice = int.tryParse(_price.text.trim());
+    final freeMessages = int.tryParse(_freeMessages.text.trim());
+    final freeImages = int.tryParse(_freeImages.text.trim());
+    final freeFiles = int.tryParse(_freeFiles.text.trim());
+    final freeVideos = int.tryParse(_freeVideos.text.trim());
+    final economicVoice = int.tryParse(_freeEconomicVoice.text.trim());
+    final advancedVoice = int.tryParse(_freeAdvancedVoice.text.trim());
+    final proImages = int.tryParse(_proImages.text.trim());
+    final proVideos = int.tryParse(_proVideos.text.trim());
+    if ([basePrice, proPrice, freeMessages, freeImages, freeFiles, freeVideos,
+      economicVoice, advancedVoice, proImages, proVideos].any((v) => v == null || v < 0)) {
+      _notify('قیمت‌ها و سهمیه‌ها باید عدد معتبر و غیرمنفی باشند.');
+      return;
+    }
     if (days == null || days < 1) {
       _notify('مدت پلن باید عددی بزرگ‌تر از صفر باشد.');
       return;
@@ -279,8 +326,24 @@ class _OwnerPanelScreenState extends State<OwnerPanelScreen> {
         'system_prompt': _prompt.text.trim(),
         'rubika_url': _rubika.text.trim(),
         'myket_url': _myket.text.trim(),
-        'pro_price': _price.text.trim(),
+        'pro_price': proPrice.toString(),
+        'pro_base_price': basePrice,
         'pro_duration_days': days,
+        'free_daily_message_limit': freeMessages,
+        'free_daily_image_limit': freeImages,
+        'free_daily_file_limit': freeFiles,
+        'free_daily_video_limit': freeVideos,
+        'free_voice_economic_minutes': economicVoice,
+        'free_voice_advanced_minutes': advancedVoice,
+        'pro_daily_image_generation_limit': proImages,
+        'pro_daily_video_generation_limit': proVideos,
+        'ads_enabled': _adsEnabled,
+        'ad_banner_enabled': _bannerEnabled,
+        'ad_banner_unit_id': _bannerUnit.text.trim(),
+        'ad_interstitial_enabled': _interstitialEnabled,
+        'ad_interstitial_unit_id': _interstitialUnit.text.trim(),
+        'ad_rewarded_enabled': _rewardedEnabled,
+        'ad_rewarded_unit_id': _rewardedUnit.text.trim(),
         'announcement': _announcement.text.trim(),
         'payment_provider': 'nextpay',
         'payment_enabled': _paymentEnabled,
@@ -345,8 +408,45 @@ class _OwnerPanelScreenState extends State<OwnerPanelScreen> {
                       const Text('پلن حرفه‌ای',
                         style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                       const SizedBox(height: 14),
-                      _field('قیمت پلن', _price),
-                      _field('مدت پلن (روز)', _duration, keyboard: TextInputType.number),
+                      _field('قیمت پایه نسخه حرفه‌ای (تومان)', _basePrice, keyboard: TextInputType.number),
+                      _field('قیمت نهایی پرداخت با کارمزد (تومان)', _price, keyboard: TextInputType.number),
+                      _field('مدت اعتبار Pro (روز)', _duration, keyboard: TextInputType.number),
+                      const Divider(height: 28),
+                      const Text('سهمیه نسخه رایگان و حرفه‌ای', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
+                      _field('پیام متنی رایگان در روز', _freeMessages, keyboard: TextInputType.number),
+                      _field('عکس رایگان در روز', _freeImages, keyboard: TextInputType.number),
+                      _field('فایل رایگان در روز', _freeFiles, keyboard: TextInputType.number),
+                      _field('ویدئوی رایگان در روز', _freeVideos, keyboard: TextInputType.number),
+                      _field('دقیقه صوت اقتصادی رایگان در روز', _freeEconomicVoice, keyboard: TextInputType.number),
+                      _field('دقیقه صوت پیشرفته رایگان در روز', _freeAdvancedVoice, keyboard: TextInputType.number),
+                      _field('تولید تصویر Pro در روز', _proImages, keyboard: TextInputType.number),
+                      _field('تولید ویدئو Pro در روز', _proVideos, keyboard: TextInputType.number),
+                      const Divider(height: 28),
+                      const Text('مدیریت تبلیغات', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
+                      SwitchListTile(
+                        value: _adsEnabled,
+                        onChanged: (value) => setState(() => _adsEnabled = value),
+                        title: const Text('فعال بودن سیستم تبلیغات'),
+                      ),
+                      SwitchListTile(
+                        value: _bannerEnabled,
+                        onChanged: (value) => setState(() => _bannerEnabled = value),
+                        title: const Text('تبلیغ بنری'),
+                        subtitle: const Text('جایگاه پیش‌فرض: پایین صفحه خانه'),
+                      ),
+                      _field('شناسه تبلیغ بنری', _bannerUnit),
+                      SwitchListTile(
+                        value: _interstitialEnabled,
+                        onChanged: (value) => setState(() => _interstitialEnabled = value),
+                        title: const Text('تبلیغ تمام‌صفحه'),
+                      ),
+                      _field('شناسه تبلیغ تمام‌صفحه', _interstitialUnit),
+                      SwitchListTile(
+                        value: _rewardedEnabled,
+                        onChanged: (value) => setState(() => _rewardedEnabled = value),
+                        title: const Text('تبلیغ جایزه‌دار'),
+                      ),
+                      _field('شناسه تبلیغ جایزه‌دار', _rewardedUnit),
                       SwitchListTile(
                         value: _paymentEnabled,
                         onChanged: (value) => setState(() => _paymentEnabled = value),
@@ -507,7 +607,10 @@ class _OwnerPanelScreenState extends State<OwnerPanelScreen> {
   @override
   void dispose() {
     for (final controller in [
-      _name, _model, _baseUrl, _prompt, _rubika, _myket, _price, _duration, _announcement,
+      _name, _model, _baseUrl, _prompt, _rubika, _myket, _price, _duration,
+      _basePrice, _freeMessages, _freeImages, _freeFiles, _freeVideos,
+      _freeEconomicVoice, _freeAdvancedVoice, _proImages, _proVideos,
+      _bannerUnit, _interstitialUnit, _rewardedUnit, _announcement,
     ]) {
       controller.dispose();
     }
