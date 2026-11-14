@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'dart:async';
+import 'package:app_links/app_links.dart';
+import '../services/openrouter_auth_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/backend_service.dart';
 import 'chat_screen.dart';
@@ -30,7 +33,8 @@ class _HomeScreenState extends State<HomeScreen> {
       }
     } catch (_) {} finally { if (mounted) setState(() => loading = false); }
   }
-  void openChat([String? prompt]) => Navigator.push(context, MaterialPageRoute(builder: (_) => ChatScreen(initialPrompt: prompt)));\n  void openSupportAssistant() => Navigator.push(context, MaterialPageRoute(builder: (_) => const ChatScreen(supportMode: true)));
+  void openChat([String? prompt]) => Navigator.push(context, MaterialPageRoute(builder: (_) => ChatScreen(initialPrompt: prompt)));
+  void openSupportAssistant() => Navigator.push(context, MaterialPageRoute(builder: (_) => const ChatScreen(supportMode: true)));
   @override
   Widget build(BuildContext context) => Directionality(
     textDirection: TextDirection.rtl,
@@ -54,7 +58,8 @@ class _HomeScreenState extends State<HomeScreen> {
     const SizedBox(height: 8), const Text('امروز چه کاری از دست وارنیکس برمیاد؟'),
     if (announcement.isNotEmpty) ...[const SizedBox(height: 12), Text(announcement)],
     const SizedBox(height: 20),
-    _tile(Icons.chat, 'شروع گفتگو با هوش مصنوعی', 'چت متنی با وارنیکس', () => openChat()),\n    _tile(Icons.support_agent, 'دستیار راهنمای وارنیکس', 'پاسخ به سؤالات و حل مشکلات خود برنامه', openSupportAssistant),
+    _tile(Icons.chat, 'شروع گفتگو با هوش مصنوعی', 'چت متنی با وارنیکس', () => openChat()),
+    _tile(Icons.support_agent, 'دستیار راهنمای وارنیکس', 'پاسخ به سؤالات و حل مشکلات خود برنامه', openSupportAssistant),
 
     _tile(Icons.widgets, 'ابزارهای هوشمند', 'نگارش، خلاصه‌سازی، ترجمه و برنامه‌نویسی', () => setState(() => tab = 1)),
     _tile(Icons.workspace_premium, 'مشاهده پلن‌ها', 'امکانات اشتراک رایگان و حرفه‌ای', () => setState(() => tab = 2)),
@@ -108,67 +113,75 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
   String font = 'پیش‌فرض', theme = 'تیره';
   bool compact = false;
   bool keyLoading = false;
+  bool openRouterConnected = false;
+  StreamSubscription<Uri>? _linkSubscription;
+  final AppLinks _appLinks = AppLinks();
+
   @override
-  void initState() { super.initState(); _read(); }
+  void initState() {
+    super.initState();
+    _read();
+    _loadOpenRouterStatus();
+    _listenForOpenRouterCallback();
+  }
+
+  Future<void> _loadOpenRouterStatus() async {
+    final connected = await OpenRouterAuthService.isConnected;
+    if (mounted) setState(() => openRouterConnected = connected);
+  }
+
+  Future<void> _listenForOpenRouterCallback() async {
+    _linkSubscription = _appLinks.uriLinkStream.listen(_handleOpenRouterCallback, onError: (_) {});
+    final initial = await _appLinks.getInitialLink();
+    if (initial != null) await _handleOpenRouterCallback(initial);
+  }
+
+  Future<void> _handleOpenRouterCallback(Uri uri) async {
+    if (uri.scheme != 'com.varnix.ai' || uri.host != 'login-callback') return;
+    if (mounted) setState(() => keyLoading = true);
+    try {
+      await OpenRouterAuthService.handleCallback(uri);
+      if (!mounted) return;
+      setState(() => openRouterConnected = true);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('حساب OpenRouter با موفقیت متصل شد.')),
+      );
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+      );
+    } finally {
+      if (mounted) setState(() => keyLoading = false);
+    }
+  }
+
+  Future<void> _connectOpenRouter() async {
+    if (keyLoading) return;
+    setState(() => keyLoading = true);
+    try {
+      await OpenRouterAuthService.beginAuthorization();
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+      );
+    } finally {
+      if (mounted) setState(() => keyLoading = false);
+    }
+  }
+
+  Future<void> _disconnectOpenRouter() async {
+    await OpenRouterAuthService.disconnect();
+    if (mounted) setState(() => openRouterConnected = false);
+  }
   Future<void> _read() async {
     final p = await SharedPreferences.getInstance();
     if (!mounted) return;
     setState(() { size = p.getDouble('varnix_font_size') ?? 16; spacing = p.getDouble('varnix_line_spacing') ?? 1.5; font = p.getString('varnix_font') ?? 'پیش‌فرض'; theme = p.getString('varnix_theme') ?? 'تیره'; compact = p.getBool('varnix_compact') ?? false; });
   }
-  Future<void> _createOpenRouterKey() async {
-    if (keyLoading) return;
-    setState(() => keyLoading = true);
-    try {
-      final result = await BackendService.createOpenRouterUserKey();
-      if (!mounted) return;
-      final apiKey = result['key'] as String;
-      final limit = result['limit_usd']?.toString() ?? '1';
-      await showDialog<void>(
-        context: context,
-        barrierDismissible: false,
-        builder: (dialogContext) => AlertDialog(
-          title: const Text('کلید اختصاصی OpenRouter ساخته شد'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('این کلید فقط همین یک‌بار نمایش داده می‌شود. آن را در جای امن ذخیره کن و برای دیگران نفرست. ساخت کلید جدید، کلید قبلی وارنیکس را غیرفعال می‌کند. مصرف از اعتبار OpenRouter وارنیکس کم می‌شود.'),
-                const SizedBox(height: 14),
-                SelectableText(apiKey, textDirection: TextDirection.ltr),
-                const SizedBox(height: 12),
-                Text('سقف مصرف روزانه این کلید: $limit دلار'),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () async {
-                await Clipboard.setData(ClipboardData(text: apiKey));
-                if (dialogContext.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('کلید کپی شد.')),
-                  );
-                }
-              },
-              child: const Text('کپی کلید'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('متوجه شدم'),
-            ),
-          ],
-        ),
-      );
-    } catch (e) {
-      if (!mounted) return;
-      final message = e.toString().replaceFirst('Exception: ', '');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message), duration: const Duration(seconds: 5)),
-      );
-    } finally {
-      if (mounted) setState(() => keyLoading = false);
-    }
+  @override
+  void dispose() {
+    _linkSubscription?.cancel();
+    super.dispose();
   }
 
   Future<void> _save() async {
@@ -188,20 +201,37 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Row(children: [
-                Icon(Icons.key_rounded),
+                Icon(Icons.account_circle_outlined),
                 SizedBox(width: 8),
-                Expanded(child: Text('کلید API اختصاصی OpenRouter', style: TextStyle(fontWeight: FontWeight.bold))),
+                Expanded(child: Text('اتصال حساب شخصی OpenRouter', style: TextStyle(fontWeight: FontWeight.bold))),
               ]),
               const SizedBox(height: 8),
-              const Text('یک کلید اختصاصی از حساب OpenRouter وارنیکس دریافت کن و در ابزارهای سازگار استفاده کن. سقف پیش‌فرض روزانه ۱ دلار است و ساخت کلید جدید هر ۲۴ ساعت یک‌بار ممکن است. هزینه از اعتبار وارنیکس کم می‌شود.'),
-              const SizedBox(height: 12),
-              FilledButton.icon(
-                onPressed: keyLoading ? null : _createOpenRouterKey,
-                icon: keyLoading
-                    ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
-                    : const Icon(Icons.add_link),
-                label: Text(keyLoading ? 'در حال ساخت کلید...' : 'ساخت و دریافت کلید API'),
+              const Text(
+                'حساب OpenRouter خودت را متصل کن تا درخواست‌های هوش مصنوعی با کلید شخصی تو ارسال شوند و هزینه از اعتبار حساب خودت کم شود. برای ورود یا ثبت‌نام، صفحه رسمی OpenRouter باز می‌شود؛ اگر گزینه Google نمایش داده شد می‌توانی با گوگل وارد شوی. رمز گوگل یا OpenRouter در وارنیکس دریافت نمی‌شود.',
               ),
+              const SizedBox(height: 12),
+              Row(children: [
+                Icon(openRouterConnected ? Icons.check_circle : Icons.link_off,
+                    color: openRouterConnected ? Colors.greenAccent : Colors.white54),
+                const SizedBox(width: 8),
+                Text(openRouterConnected ? 'حساب متصل است' : 'حسابی متصل نشده'),
+              ]),
+              const SizedBox(height: 12),
+              Wrap(spacing: 8, runSpacing: 8, children: [
+                FilledButton.icon(
+                  onPressed: keyLoading ? null : _connectOpenRouter,
+                  icon: keyLoading
+                      ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                      : const Icon(Icons.login),
+                  label: Text(keyLoading ? 'در حال اتصال...' : openRouterConnected ? 'اتصال دوباره' : 'اتصال با OpenRouter'),
+                ),
+                if (openRouterConnected)
+                  OutlinedButton.icon(
+                    onPressed: keyLoading ? null : _disconnectOpenRouter,
+                    icon: const Icon(Icons.link_off),
+                    label: const Text('قطع اتصال'),
+                  ),
+              ]),
             ],
           ),
         ),
