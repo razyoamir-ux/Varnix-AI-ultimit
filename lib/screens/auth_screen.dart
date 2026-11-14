@@ -70,7 +70,7 @@ class _AuthScreenState extends State<AuthScreen> {
                         ),
                         boxShadow: [
                           BoxShadow(
-                            color: const Color(0xFF7C3AED).withValues(alpha: 0.30),
+                            color: const Color(0xFF7C3AED).withOpacity(0.30),
                             blurRadius: 24,
                             spreadRadius: 2,
                           ),
