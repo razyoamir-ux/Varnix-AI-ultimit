@@ -141,14 +141,17 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _plans() => ListView(padding: const EdgeInsets.all(18), children: [
     const Text('پلن‌های وارنیکس', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
     const SizedBox(height: 12),
-    _planCard('رایگان','۰ تومان','دسترسی پایه به گفتگو و ابزارهای متنی',plan == 'free'),
-    _planCard('حرفه‌ای','قیمت از پنل مالک تعیین می‌شود','برای استفاده بیشتر و دسترسی‌های پیشرفته؛ خرید تا اتصال درگاه غیرفعال است.',plan == 'pro'),
-    const Text('توجه: ویژگی‌ها و سقف مصرف هر پلن باید در سرور هم اعمال شوند؛ نمایش این کارت به‌تنهایی خرید یا ارتقای پلن انجام نمی‌دهد.', style: TextStyle(color: Colors.white60)),
+    _planCard('رایگان', '۰ تومان', '۲۰ درخواست در روز • حداکثر ۱٬۰۲۴ توکن برای هر پاسخ • دسترسی پایه', plan == 'free'),
+    _planCard('پرو', 'اشتراک پولی', '۱۰۰ درخواست در روز • حداکثر ۲٬۰۴۸ توکن برای هر پاسخ • مناسب استفاده روزمره', plan == 'pro'),
+    _planCard('پرو مکس', 'اشتراک پولی', '۳۰۰ درخواست در روز • حداکثر ۴٬۰۹۶ توکن برای هر پاسخ • استفاده سنگین‌تر', plan == 'pro_max'),
+    _planCard('اولترا مکس', 'اشتراک پولی', '۸۰۰ درخواست در روز • حداکثر ۸٬۱۹۲ توکن برای هر پاسخ • بالاترین سهمیه', plan == 'ultra_max'),
+    const SizedBox(height: 8),
+    const Text('سهمیه‌ها در سرور کنترل می‌شوند و هر روز در ساعت ۰۰:۰۰ UTC بازنشانی می‌شوند. خرید پلن‌های پولی تا فعال‌شدن درگاه پرداخت در دسترس نیست.', style: TextStyle(color: Colors.white60)),
   ]);
   Widget _account() => ListView(padding: const EdgeInsets.all(18), children: [
     const CircleAvatar(radius: 34, child: Icon(Icons.person, size: 36)),
     const SizedBox(height: 12), Text(BackendService.currentUser?.email ?? 'حساب کاربری', textAlign: TextAlign.center),
-    const SizedBox(height: 10), Text('پلن فعلی: ${plan == 'pro' ? 'حرفه‌ای' : 'رایگان'}', textAlign: TextAlign.center),
+    const SizedBox(height: 10), Text('پلن فعلی: ${{'free': 'رایگان', 'pro': 'پرو', 'pro_max': 'پرو مکس', 'ultra_max': 'اولترا مکس'}[plan] ?? 'رایگان'}', textAlign: TextAlign.center),
     if (admin) _tile(Icons.admin_panel_settings, 'پنل مالک', 'مدیریت برنامه', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const OwnerPanelScreen()))),
     _tile(Icons.help_outline, 'راهنمای استفاده از وارنیکس', 'مشاهده دوباره آموزش چندمرحله‌ای', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const HelpGuideScreen()))),
     _tile(Icons.settings, 'تنظیمات ظاهر و فونت', 'شخصی‌سازی تجربه برنامه', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AppSettingsScreen()))),
