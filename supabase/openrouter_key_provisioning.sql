@@ -24,7 +24,7 @@ begin
   on conflict (user_id) do update
     set last_issued_at = now(), updated_at = now()
     where public.openrouter_user_keys.last_issued_at is null
-       or public.openrouter_user_keys.last_issued_at < now() - interval '5 minutes'
+       or public.openrouter_user_keys.last_issued_at < now() - interval '24 hours'
   returning true into reserved;
 
   return coalesce(reserved, false);
