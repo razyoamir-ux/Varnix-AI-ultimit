@@ -232,6 +232,48 @@ class _ChatScreenState extends State<ChatScreen> {
     _scrollToBottom();
   }
 
+  Future<void> _regenerateLastAnswer() async {
+    if (_sending || _conversationId == null) return;
+    final lastIndex = _messages.lastIndexWhere((message) => message.role == 'assistant');
+    if (lastIndex < 0 || lastIndex != _messages.length - 1) return;
+    final oldAnswer = _messages[lastIndex];
+    final history = _messages
+        .take(lastIndex)
+        .map((message) => <String, String>{
+              'role': message.role,
+              'content': message.content,
+            })
+        .toList();
+    if (history.isEmpty || history.last['role'] != 'user') return;
+
+    setState(() => _sending = true);
+    try {
+      final answer = await BackendService.sendChat(
+        messages: history,
+        assistantId: _selectedAssistantId,
+      );
+      await BackendService.client
+          .from('messages')
+          .update({'content': answer})
+          .eq('id', oldAnswer.id);
+      if (!mounted) return;
+      setState(() {
+        _messages[lastIndex] = ChatMessage(
+          id: oldAnswer.id,
+          role: 'assistant',
+          content: answer,
+          timestamp: DateTime.now(),
+        );
+        _sending = false;
+      });
+      _scrollToBottom();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _sending = false);
+      _showError('ساخت پاسخ دوباره ناموفق بود: ${e.toString().replaceFirst('Exception: ', '')}');
+    }
+  }
+
   Future<void> _newConversation() async {
     if (Navigator.of(context).canPop()) Navigator.of(context).pop();
     setState(() {
@@ -467,7 +509,15 @@ class _ChatScreenState extends State<ChatScreen> {
                               return const TypingIndicator();
                             }
                             final message = _messages[index];
-                            return MessageBubble(message: message, isUser: message.role == 'user');
+                            return MessageBubble(
+                              message: message,
+                              isUser: message.role == 'user',
+                              onRegenerate: !_sending &&
+                                      message.role == 'assistant' &&
+                                      index == _messages.length - 1
+                                  ? _regenerateLastAnswer
+                                  : null,
+                            );
                           },
                         ),
             ),
