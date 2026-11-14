@@ -131,9 +131,9 @@ class _OwnerPanelScreenState extends State<OwnerPanelScreen> {
   Future<void> _applyUserAction(Map<String, dynamic> user, String action) async {
     try {
       final params = <String, dynamic>{'target_user_id': user['id']};
-      if (action == 'pro') {
+      if (['pro', 'pro_max', 'ultra_max'].contains(action)) {
         final days = int.tryParse(_duration.text.trim()) ?? 30;
-        params['new_plan_code'] = 'pro';
+        params['new_plan_code'] = action;
         params['new_plan_expires_at'] = DateTime.now()
             .add(Duration(days: days))
             .toUtc()
@@ -383,7 +383,9 @@ class _OwnerPanelScreenState extends State<OwnerPanelScreen> {
                           trailing: PopupMenuButton<String>(
                             onSelected: (value) => _applyUserAction(user, value),
                             itemBuilder: (_) => const [
-                              PopupMenuItem(value: 'pro', child: Text('فعال‌سازی پلن حرفه‌ای')),
+                              PopupMenuItem(value: 'pro', child: Text('فعال‌سازی پلن پرو')),
+                              PopupMenuItem(value: 'pro_max', child: Text('فعال‌سازی پلن پرو مکس')),
+                              PopupMenuItem(value: 'ultra_max', child: Text('فعال‌سازی پلن اولترا مکس')),
                               PopupMenuItem(value: 'free', child: Text('بازگشت به پلن رایگان')),
                               PopupMenuItem(value: 'admin', child: Text('اعطای دسترسی مدیر')),
                               PopupMenuItem(value: 'user', child: Text('حذف دسترسی مدیر')),
