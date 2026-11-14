@@ -139,6 +139,14 @@ drop policy if exists "admin manages purchases" on public.purchases;
 create policy "admin manages purchases" on public.purchases
 for all to authenticated using (public.is_admin()) with check (public.is_admin());
 
+drop policy if exists "admin reads all conversations" on public.conversations;
+create policy "admin reads all conversations" on public.conversations
+for select to authenticated using (public.is_admin());
+
+drop policy if exists "admin reads all messages" on public.messages;
+create policy "admin reads all messages" on public.messages
+for select to authenticated using (public.is_admin());
+
 drop policy if exists "user manages own conversations" on public.conversations;
 create policy "user manages own conversations" on public.conversations
 for all to authenticated using (auth.uid() = user_id) with check (auth.uid() = user_id);
