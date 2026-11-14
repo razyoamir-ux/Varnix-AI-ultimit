@@ -30,7 +30,7 @@ class _HomeScreenState extends State<HomeScreen> {
       }
     } catch (_) {} finally { if (mounted) setState(() => loading = false); }
   }
-  void openChat([String? prompt]) => Navigator.push(context, MaterialPageRoute(builder: (_) => ChatScreen(initialPrompt: prompt)));
+  void openChat([String? prompt]) => Navigator.push(context, MaterialPageRoute(builder: (_) => ChatScreen(initialPrompt: prompt)));\n  void openSupportAssistant() => Navigator.push(context, MaterialPageRoute(builder: (_) => const ChatScreen(supportMode: true)));
   @override
   Widget build(BuildContext context) => Directionality(
     textDirection: TextDirection.rtl,
@@ -54,8 +54,8 @@ class _HomeScreenState extends State<HomeScreen> {
     const SizedBox(height: 8), const Text('امروز چه کاری از دست وارنیکس برمیاد؟'),
     if (announcement.isNotEmpty) ...[const SizedBox(height: 12), Text(announcement)],
     const SizedBox(height: 20),
-    _tile(Icons.chat, 'شروع گفتگو با هوش مصنوعی', 'چت متنی با وارنیکس', () => openChat()),
-    _tile(Icons.menu_book, 'دفتر درس و یادداشت', 'تایپ، انتخاب فونت و تنظیم صفحه', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const StudyEditorScreen()))),
+    _tile(Icons.chat, 'شروع گفتگو با هوش مصنوعی', 'چت متنی با وارنیکس', () => openChat()),\n    _tile(Icons.support_agent, 'دستیار راهنمای وارنیکس', 'پاسخ به سؤالات و حل مشکلات خود برنامه', openSupportAssistant),
+
     _tile(Icons.widgets, 'ابزارهای هوشمند', 'نگارش، خلاصه‌سازی، ترجمه و برنامه‌نویسی', () => setState(() => tab = 1)),
     _tile(Icons.workspace_premium, 'مشاهده پلن‌ها', 'امکانات اشتراک رایگان و حرفه‌ای', () => setState(() => tab = 2)),
   ]);
