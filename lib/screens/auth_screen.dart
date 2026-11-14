@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/backend_service.dart';
-import 'chat_screen.dart';
+import 'home_screen.dart';
 
 class AuthGate extends StatelessWidget {
   const AuthGate({super.key});
@@ -11,7 +11,7 @@ class AuthGate extends StatelessWidget {
     return StreamBuilder<AuthState>(
       stream: BackendService.client.auth.onAuthStateChange,
       builder: (context, snapshot) {
-        if (BackendService.client.auth.currentSession != null) return const ChatScreen();
+        if (BackendService.client.auth.currentSession != null) return const HomeScreen();
         return const AuthScreen();
       },
     );
@@ -49,7 +49,16 @@ class _AuthScreenState extends State<AuthScreen> {
           data: {'display_name': _name.text.trim()},
         );
         if (mounted && result.session == null) {
-          _notice('حساب ساخته شد. ایمیلتان را برای تأیید حساب بررسی کنید.');
+          await showDialog<void>(
+            context: context,
+            builder: (dialogContext) => AlertDialog(
+              title: const Text('به وارنیکس خوش آمدی!'),
+              content: const Text('از ثبت‌نامت متشکریم ❤️ حساب تو ساخته شد. لطفاً ایمیلت را تأیید کن و سپس وارد برنامه شو.'),
+              actions: [TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('ادامه'))],
+            ),
+          );
+        } else if (mounted) {
+          _notice('از ثبت‌نامت متشکریم؛ به وارنیکس خوش آمدی!');
         }
       } else {
         await BackendService.client.auth.signInWithPassword(email: email, password: password);
