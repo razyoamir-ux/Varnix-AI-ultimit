@@ -43,7 +43,7 @@ jobs:
       - name: Install Android SDK 36
         run: |
           set -euo pipefail
-          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36"
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "build-tools;36.0.0"
       - name: Generate Gradle Wrapper 8.14.3
         run: gradle -p android wrapper --gradle-version 8.14.3 --distribution-type bin
       - name: Build Debug APK for Android verification
@@ -105,7 +105,9 @@ jobs:
         run: |
           APK=build/app/outputs/flutter-apk/app-release.apk
           test -s "$APK"
-          apksigner verify --verbose "$APK"
+          APKSIGNER="$ANDROID_HOME/build-tools/36.0.0/apksigner"
+          test -x "$APKSIGNER" || { echo "Android apksigner not found at $APKSIGNER"; exit 1; }
+          "$APKSIGNER" verify --verbose "$APK"
       - name: Upload signed APK
         uses: actions/upload-artifact@v4
         with:
