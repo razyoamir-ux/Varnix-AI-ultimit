@@ -318,7 +318,18 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
 
   Future<void> _fetchProviderModels() async {
     final info = _providers[providerId]!;
-    final key = _providerKeyController.text.trim();
+    var key = _providerKeyController.text.trim();
+    // OAuth-created OpenRouter keys are stored securely and may not be in the visible text field.
+    if (key.isEmpty) {
+      const secure = FlutterSecureStorage();
+      final userId = BackendService.currentUser!.id;
+      key = await secure.read(
+            key: providerId == 'openrouter'
+                ? 'openrouter_user_api_key_$userId'
+                : 'varnix_provider_api_key_${userId}_$providerId',
+          ) ??
+          '';
+    }
     if (providerId != 'openrouter' && key.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('اول کلید API این سرویس را وارد کن.')),
@@ -327,8 +338,16 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
     }
     setState(() => modelsLoading = true);
     try {
+      final modelsUri = Uri.parse('${info['url']}/models').replace(
+        queryParameters: providerId == 'openrouter'
+            ? const {
+                'endpoints': '/api/v1/chat/completions',
+                'output_modalities': 'text',
+              }
+            : null,
+      );
       final response = await http.get(
-        Uri.parse('${info['url']}/models'),
+        modelsUri,
         headers: {
           'Accept': 'application/json',
           if (key.isNotEmpty) 'Authorization': 'Bearer $key',
