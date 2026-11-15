@@ -54,7 +54,7 @@ class _ChatScreenState extends State<ChatScreen> {
         isAdmin = (profile?['role'] ?? '').toString().toLowerCase() == 'admin';
         final plan = (profile?['plan_code'] ?? 'free').toString().toLowerCase();
         final expiry = profile?['plan_expires_at'];
-        isPro = plan == 'owner' || (plan == 'pro' && (expiry == null || DateTime.tryParse(expiry.toString())?.isAfter(DateTime.now()) == true));
+        isPro = isAdmin || plan == 'owner' || (plan == 'pro' && (expiry == null || DateTime.tryParse(expiry.toString())?.isAfter(DateTime.now()) == true));
       }
     } catch (_) {}
     List<Map<String, dynamic>> models = [];
