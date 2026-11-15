@@ -163,6 +163,7 @@ serve(async (req) => {
     if (attachments.length > 5) return json({ error: "حداکثر ۵ فایل را هم‌زمان می‌توانی ارسال کنی." }, 400);
     const { data: profile } = await supabase.from("profiles").select("plan_code,plan_expires_at").eq("id", user.id).maybeSingle();
     let plan = String(profile?.plan_code ?? "free").toLowerCase();
+    if (plan === "owner") plan = "pro";
     if (plan === "pro" && profile?.plan_expires_at && new Date(profile.plan_expires_at).getTime() <= Date.now()) plan = "free";
     const maxMb = Math.max(1, Number(plan === "pro" ? config?.pro_max_attachment_mb : config?.free_max_attachment_mb) || (plan === "pro" ? 20 : 5));
     const attachmentBlocks: Array<any> = [];
