@@ -7,6 +7,7 @@ import '../widgets/typing_indicator.dart';
 import 'owner_panel_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'media_library_screen.dart';
 
 class ChatScreen extends StatefulWidget {
   final String? initialPrompt;
@@ -496,6 +497,7 @@ class _ChatScreenState extends State<ChatScreen> {
               icon: const Icon(Icons.add_comment_outlined)),
             PopupMenuButton<String>(
               onSelected: (value) {
+                if (value == 'media') Navigator.of(context).push(MaterialPageRoute(builder: (_) => const MediaLibraryScreen()));
                 if (value == 'instructions') _showInstructionsEditor();
                 if (value == 'logout') _signOut();
                 if (value == 'email') _showAccount(email);
@@ -511,6 +513,7 @@ class _ChatScreenState extends State<ChatScreen> {
               itemBuilder: (_) => [
                 if (_isAdmin)
                   const PopupMenuItem(value: 'admin', child: Text('پنل مدیریت')),
+                const PopupMenuItem(value: 'media', child: Text('رسانه‌ها و فایل‌های من')),
                 const PopupMenuItem(value: 'email', child: Text('حساب کاربری')),
                 const PopupMenuItem(value: 'plan', child: Text('اشتراک وارنیکس')),
                 const PopupMenuItem(value: 'instructions', child: Text('شخصی‌سازی هوش مصنوعی')),
