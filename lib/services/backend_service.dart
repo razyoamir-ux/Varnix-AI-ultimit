@@ -24,7 +24,7 @@ class BackendService {
     try {
       final row = await client
           .from('app_config')
-          .select('app_name,default_model,system_prompt,rubika_url,myket_url,pro_price,pro_base_price')
+          .select('app_name,default_model,system_prompt,rubika_url,myket_url,pro_price,pro_base_price,pro_duration_days')
           .eq('id', true)
           .maybeSingle();
       if (row == null) return fallback;
@@ -32,7 +32,7 @@ class BackendService {
       final displayedPrice = (row['pro_price'] as String?)?.trim();
       final basePrice = row['pro_base_price'];
       final price = displayedPrice != null && displayedPrice.isNotEmpty
-          ? displayedPrice
+          ? (displayedPrice.contains('تومان') ? displayedPrice : '$displayedPrice تومان')
           : (basePrice == null ? fallback.paymentAmount : '${basePrice.toString()} تومان');
 
       return fallback.copyWith(
@@ -42,9 +42,9 @@ class BackendService {
         rubikaChannelLink: row['rubika_url'] as String? ?? fallback.rubikaChannelLink,
         myketLink: row['myket_url'] as String? ?? fallback.myketLink,
         paymentAmount: price,
+        proDurationDays: (row['pro_duration_days'] as num?)?.toInt() ?? fallback.proDurationDays,
       );
     } catch (_) {
-      // Keep the last locally saved settings if the network is temporarily unavailable.
       return fallback;
     }
   }

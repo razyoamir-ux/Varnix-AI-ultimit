@@ -7,6 +7,7 @@ class AppSettings {
   String paymentLink;
   String myketLink;
   String paymentAmount;
+  int proDurationDays;
 
   AppSettings({
     this.aiName = 'وارنیکس',
@@ -17,7 +18,8 @@ class AppSettings {
     this.rubikaChannelLink = '',
     this.paymentLink = '',
     this.myketLink = '',
-    this.paymentAmount = '۵۰٬۰۰۰ تومان',
+    this.paymentAmount = '۱۸۹٬۰۰۰ تومان',
+    this.proDurationDays = 40,
   });
 
   Map<String, dynamic> toJson() => {
@@ -29,6 +31,7 @@ class AppSettings {
         'paymentLink': paymentLink,
         'myketLink': myketLink,
         'paymentAmount': paymentAmount,
+        'proDurationDays': proDurationDays,
       };
 
   factory AppSettings.fromJson(Map<String, dynamic> json) => AppSettings(
@@ -40,7 +43,8 @@ class AppSettings {
         rubikaChannelLink: json['rubikaChannelLink'] as String? ?? '',
         paymentLink: json['paymentLink'] as String? ?? '',
         myketLink: json['myketLink'] as String? ?? '',
-        paymentAmount: json['paymentAmount'] as String? ?? '۵۰٬۰۰۰ تومان',
+        paymentAmount: json['paymentAmount'] as String? ?? '۱۸۹٬۰۰۰ تومان',
+        proDurationDays: (json['proDurationDays'] as num?)?.toInt() ?? 40,
       );
 
   AppSettings copyWith({
@@ -52,6 +56,7 @@ class AppSettings {
     String? paymentLink,
     String? myketLink,
     String? paymentAmount,
+    int? proDurationDays,
   }) {
     return AppSettings(
       aiName: aiName ?? this.aiName,
@@ -62,6 +67,7 @@ class AppSettings {
       paymentLink: paymentLink ?? this.paymentLink,
       myketLink: myketLink ?? this.myketLink,
       paymentAmount: paymentAmount ?? this.paymentAmount,
+      proDurationDays: proDurationDays ?? this.proDurationDays,
     );
   }
 }

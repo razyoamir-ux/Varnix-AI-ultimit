@@ -1,4 +1,4 @@
-package com.varnix.ai
+package com.varnix.ai.ultimateplus
 
 import io.flutter.embedding.android.FlutterActivity
 
