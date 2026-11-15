@@ -109,7 +109,7 @@ serve(async (req) => {
 
     const { data: config, error: configError } = await supabase
       .from("app_config")
-      .select("default_model,api_base_url,system_prompt")
+      .select("default_model,api_base_url,system_prompt,free_daily_image_limit,free_daily_file_limit,pro_daily_image_input_limit,pro_daily_file_input_limit,free_max_attachment_mb,pro_max_attachment_mb")
       .eq("id", true)
       .maybeSingle();
     if (configError) return json({ error: "Could not load app configuration" }, 503);
@@ -159,6 +159,47 @@ serve(async (req) => {
       return json({ error: "AI configuration is invalid" }, 503);
     }
 
+    const attachments = Array.isArray(payload.attachments) ? payload.attachments : [];
+    if (attachments.length > 5) return json({ error: "حداکثر ۵ فایل را هم‌زمان می‌توانی ارسال کنی." }, 400);
+    const { data: profile } = await supabase.from("profiles").select("plan_code,plan_expires_at").eq("id", user.id).maybeSingle();
+    let plan = String(profile?.plan_code ?? "free").toLowerCase();
+    if (plan === "pro" && profile?.plan_expires_at && new Date(profile.plan_expires_at).getTime() <= Date.now()) plan = "free";
+    const maxMb = Math.max(1, Number(plan === "pro" ? config?.pro_max_attachment_mb : config?.free_max_attachment_mb) || (plan === "pro" ? 20 : 5));
+    const attachmentBlocks: Array<any> = [];
+    let imageCount = 0;
+    let fileCount = 0;
+    for (const item of attachments) {
+      if (!item || typeof item.path !== "string" || typeof item.name !== "string" ||
+          !item.path.startsWith(user.id + "/") || item.path.includes("..") || item.path.length > 500) {
+        return json({ error: "مسیر فایل معتبر نیست." }, 400);
+      }
+      const ext = item.name.split(".").pop()?.toLowerCase() ?? "";
+      const isImage = ["jpg","jpeg","png","webp","gif"].includes(ext);
+      const isText = ["txt","md","csv","json"].includes(ext);
+      if (!isImage && !isText) return json({ error: "این نوع فایل فعلاً برای تحلیل پشتیبانی نمی‌شود." }, 415);
+      const { data: blob, error: downloadError } = await supabase.storage.from("varnix-media").download(item.path);
+      if (downloadError || !blob) return json({ error: "دریافت فایل از کتابخانه ناموفق بود." }, 404);
+      if (blob.size > maxMb * 1024 * 1024) return json({ error: `حداکثر حجم مجاز هر فایل در پلن شما ${maxMb} مگابایت است.` }, 413);
+      if (isImage) {
+        imageCount++;
+        const { data: quota, error } = await supabase.rpc("consume_ai_attachment_quota", { p_kind: "image" });
+        if (error || !quota?.allowed) return json({ error: `سهمیه روزانه ارسال تصویر تمام شده است (${quota?.used ?? 0}/${quota?.daily_limit ?? 0}).`, quota }, 429);
+        const { data: signed, error: signedError } = await supabase.storage.from("varnix-media").createSignedUrl(item.path, 300);
+        if (signedError || !signed?.signedUrl) return json({ error: "ساخت لینک امن تصویر ناموفق بود." }, 503);
+        attachmentBlocks.push({ type: "image_url", image_url: { url: signed.signedUrl } });
+      } else {
+        fileCount++;
+        const { data: quota, error } = await supabase.rpc("consume_ai_attachment_quota", { p_kind: "file" });
+        if (error || !quota?.allowed) return json({ error: `سهمیه روزانه ارسال فایل تمام شده است (${quota?.used ?? 0}/${quota?.daily_limit ?? 0}).`, quota }, 429);
+        const textContent = await blob.text();
+        if (textContent.length > 20000) return json({ error: "فایل متنی بیش از حد بزرگ است؛ حداکثر ۲۰ هزار نویسه." }, 413);
+        attachmentBlocks.push({ type: "text", text: `محتوای فایل ${item.name}:\\n${textContent}` });
+      }
+    }
+    const imageLimit = plan === "pro" ? Number(config?.pro_daily_image_input_limit ?? 30) : Number(config?.free_daily_image_limit ?? 2);
+    const fileLimit = plan === "pro" ? Number(config?.pro_daily_file_input_limit ?? 20) : Number(config?.free_daily_file_limit ?? 2);
+    if (imageCount > imageLimit || fileCount > fileLimit) return json({ error: "تعداد فایل‌های ارسالی از سقف روزانه پلن بیشتر است." }, 429);
+
     const { data: quota, error: quotaError } = await supabase.rpc("consume_ai_quota");
     if (quotaError || !quota || typeof quota !== "object") {
       return json({ error: "سهمیه حساب بررسی نشد؛ لطفاً کمی بعد دوباره تلاش کن." }, 503);
@@ -179,7 +220,7 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         model,
-        messages: [{ role: "system", content: systemPrompt }, ...safeMessages],
+        messages: [{ role: "system", content: systemPrompt }, ...safeMessages.map((m, i) => i === safeMessages.length - 1 && attachmentBlocks.length > 0 ? { role: m.role, content: [{ type: "text", text: m.content }, ...attachmentBlocks] } : m)],
         temperature: 0.7,
         max_tokens: Math.min(Number(quota.max_output_tokens) || 2048, 8192),
       }),
