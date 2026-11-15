@@ -49,7 +49,6 @@ jobs:
         run: flutter analyze --no-fatal-infos
 
       - name: Prepare release signing key
-        if: ${{ secrets.KEYSTORE_BASE64 != '' }}
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
         run: |
