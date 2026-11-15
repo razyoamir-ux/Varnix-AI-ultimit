@@ -1,7 +1,7 @@
 name: varnix_ai
 description: Varnix AI 2.0 - Persian AI Assistant
 publish_to: 'none'
-version: 2.0.0+1
+version: 2.0.1+2
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
