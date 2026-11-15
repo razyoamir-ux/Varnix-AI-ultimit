@@ -7,7 +7,6 @@ class AppSettings {
   String paymentLink;
   String myketLink;
   String paymentAmount;
-  String ownerPassword;
 
   AppSettings({
     this.aiName = 'وارنیکس',
@@ -19,7 +18,6 @@ class AppSettings {
     this.paymentLink = '',
     this.myketLink = '',
     this.paymentAmount = '۵۰٬۰۰۰ تومان',
-    this.ownerPassword = '246810',
   });
 
   Map<String, dynamic> toJson() => {
@@ -31,7 +29,6 @@ class AppSettings {
         'paymentLink': paymentLink,
         'myketLink': myketLink,
         'paymentAmount': paymentAmount,
-        'ownerPassword': ownerPassword,
       };
 
   factory AppSettings.fromJson(Map<String, dynamic> json) => AppSettings(
@@ -44,7 +41,6 @@ class AppSettings {
         paymentLink: json['paymentLink'] as String? ?? '',
         myketLink: json['myketLink'] as String? ?? '',
         paymentAmount: json['paymentAmount'] as String? ?? '۵۰٬۰۰۰ تومان',
-        ownerPassword: json['ownerPassword'] as String? ?? '246810',
       );
 
   AppSettings copyWith({
@@ -56,7 +52,6 @@ class AppSettings {
     String? paymentLink,
     String? myketLink,
     String? paymentAmount,
-    String? ownerPassword,
   }) {
     return AppSettings(
       aiName: aiName ?? this.aiName,
@@ -67,7 +62,6 @@ class AppSettings {
       paymentLink: paymentLink ?? this.paymentLink,
       myketLink: myketLink ?? this.myketLink,
       paymentAmount: paymentAmount ?? this.paymentAmount,
-      ownerPassword: ownerPassword ?? this.ownerPassword,
     );
   }
 }
