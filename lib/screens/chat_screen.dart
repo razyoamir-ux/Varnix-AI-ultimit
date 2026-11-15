@@ -9,6 +9,7 @@ import '../services/storage_service.dart';
 import '../widgets/message_bubble.dart';
 import '../widgets/typing_indicator.dart';
 import '../services/backend_service.dart';
+import '../services/cloud_chat_service.dart';
 import 'auth_screen.dart';
 import 'owner_panel_screen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -25,6 +26,7 @@ class _ChatScreenState extends State<ChatScreen> {
   final ScrollController _scrollController = ScrollController();
   final StorageService _storage = StorageService();
   final ApiService _api = ApiService();
+  final CloudChatService _cloudChat = CloudChatService();
 
   List<ChatMessage> _messages = [];
   AppSettings _settings = AppSettings();
@@ -43,7 +45,14 @@ class _ChatScreenState extends State<ChatScreen> {
 
   Future<void> _loadData() async {
     final settings = await _storage.loadSettings();
-    final history = await _storage.loadChatHistory();
+    final chatUserId = Supabase.instance.client.auth.currentUser?.id;
+    var history = await _storage.loadChatHistory(userId: chatUserId);
+    try {
+      history = await _cloudChat.loadOrSyncLocal(history);
+      await _storage.saveChatHistory(history, userId: chatUserId);
+    } catch (_) {
+      // Keep the local history available if cloud sync is temporarily offline.
+    }
     final remoteSettings = await BackendService.loadRemoteSettings(settings);
     var isPro = false;
     var isAdmin = false;
@@ -115,7 +124,8 @@ class _ChatScreenState extends State<ChatScreen> {
       _controller.clear();
     });
     _scrollToBottom();
-    await _storage.saveChatHistory(_messages);
+    await _storage.saveChatHistory(_messages, userId: Supabase.instance.client.auth.currentUser?.id);
+    try { await _cloudChat.syncMessage(userMsg); } catch (_) {}
 
     try {
       final reply = await _api.sendMessage(
@@ -135,7 +145,8 @@ class _ChatScreenState extends State<ChatScreen> {
         _messages.add(aiMsg);
         _isLoading = false;
       });
-      await _storage.saveChatHistory(_messages);
+      await _storage.saveChatHistory(_messages, userId: Supabase.instance.client.auth.currentUser?.id);
+      try { await _cloudChat.syncMessage(aiMsg); } catch (_) {}
     } catch (e) {
       setState(() => _isLoading = false);
       if (mounted) {
@@ -211,7 +222,9 @@ class _ChatScreenState extends State<ChatScreen> {
       ),
     );
     if (confirm == true) {
-      await _storage.clearChatHistory();
+      await _storage.clearChatHistory(userId: Supabase.instance.client.auth.currentUser?.id);
+      // Start a fresh cloud conversation; previous cloud records are preserved.
+      try { await _cloudChat.startNewConversation(); } catch (_) {}
       setState(() => _messages = []);
     }
   }

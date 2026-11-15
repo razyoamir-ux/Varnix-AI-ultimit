@@ -45,10 +45,12 @@ class StorageService {
     await _secureStorage.delete(key: _apiKeyKey);
   }
 
-  // Chat History
-  Future<List<ChatMessage>> loadChatHistory() async {
+  // Keep signed-in users' histories isolated; the legacy local history is left untouched.
+  String _historyStorageKey(String? userId) => userId == null ? _chatHistoryKey : '${_chatHistoryKey}_${userId}';
+
+  Future<List<ChatMessage>> loadChatHistory({String? userId}) async {
     final prefs = await SharedPreferences.getInstance();
-    final jsonStr = prefs.getString(_chatHistoryKey);
+    final jsonStr = prefs.getString(_historyStorageKey(userId));
     if (jsonStr == null) return [];
     try {
       final List list = jsonDecode(jsonStr);
@@ -58,15 +60,15 @@ class StorageService {
     }
   }
 
-  Future<void> saveChatHistory(List<ChatMessage> messages) async {
+  Future<void> saveChatHistory(List<ChatMessage> messages, {String? userId}) async {
     final prefs = await SharedPreferences.getInstance();
     final jsonList = messages.map((m) => m.toJson()).toList();
-    await prefs.setString(_chatHistoryKey, jsonEncode(jsonList));
+    await prefs.setString(_historyStorageKey(userId), jsonEncode(jsonList));
   }
 
-  Future<void> clearChatHistory() async {
+  Future<void> clearChatHistory({String? userId}) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_chatHistoryKey);
+    await prefs.remove(_historyStorageKey(userId));
   }
 
   // Backup: deliberately excludes API credentials and owner authentication secrets.
