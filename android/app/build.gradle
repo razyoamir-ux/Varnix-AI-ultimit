@@ -1,4 +1,3 @@
-
 plugins {
     id "com.android.application"
     id "kotlin-android"
@@ -21,7 +20,12 @@ def releaseStoreFile = System.getenv('KEYSTORE_PATH') ?: 'release-key.jks'
 def releaseStorePassword = System.getenv('STORE_PASSWORD')
 def releaseKeyAlias = System.getenv('KEY_ALIAS')
 def releaseKeyPassword = System.getenv('KEY_PASSWORD')
-def hasReleaseKey = releaseStorePassword && releaseKeyAlias && releaseKeyPassword && file(releaseStoreFile).exists()
+def releaseKeyFile = file(releaseStoreFile)
+def hasReleaseKey = releaseStorePassword && releaseKeyAlias && releaseKeyPassword && releaseKeyFile.exists() && releaseKeyFile.length() > 0
+
+if (gradle.startParameter.taskNames.any { it.toLowerCase().contains('release') } && !hasReleaseKey) {
+    throw new GradleException('Release build blocked: provide a valid release keystore and KEYSTORE_PATH, STORE_PASSWORD, KEY_ALIAS, KEY_PASSWORD. Debug signing is never used for release builds.')
+}
 
 android {
     namespace "com.varnix.ai"
@@ -48,7 +52,7 @@ android {
     signingConfigs {
         release {
             if (hasReleaseKey) {
-                storeFile file(releaseStoreFile)
+                storeFile releaseKeyFile
                 storePassword releaseStorePassword
                 keyAlias releaseKeyAlias
                 keyPassword releaseKeyPassword
@@ -58,7 +62,7 @@ android {
 
     buildTypes {
         release {
-            signingConfig hasReleaseKey ? signingConfigs.release : signingConfigs.debug
+            signingConfig signingConfigs.release
             minifyEnabled false
             shrinkResources false
         }
