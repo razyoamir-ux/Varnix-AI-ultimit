@@ -10,6 +10,7 @@ import '../services/openrouter_auth_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/backend_service.dart';
 import 'chat_screen.dart';
+import 'media_library_screen.dart';
 import 'owner_panel_screen.dart';
 import 'help_guide_screen.dart';
 
@@ -164,6 +165,7 @@ class _HomeScreenState extends State<HomeScreen> {
     if (announcement.isNotEmpty) ...[const SizedBox(height: 12), Text(announcement)],
     const SizedBox(height: 20),
     _tile(Icons.chat, 'شروع گفتگو با هوش مصنوعی', 'چت متنی با وارنیکس', () => openChat()),
+    _tile(Icons.perm_media_outlined, 'رسانه‌ها و فایل‌های من', 'مدیریت عکس‌ها، ویدئوها و فایل‌های شخصی', () => Navigator.push(context, MaterialPageRoute(builder: (_) => const MediaLibraryScreen()))),
     _tile(Icons.support_agent, 'دستیار راهنمای وارنیکس', 'پاسخ به سؤالات و حل مشکلات خود برنامه', openSupportAssistant),
 
     _tile(Icons.widgets, 'ابزارهای هوشمند', 'نگارش، خلاصه‌سازی، ترجمه و برنامه‌نویسی', () => setState(() => tab = 1)),
