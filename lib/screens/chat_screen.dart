@@ -6,7 +6,7 @@ import '../services/api_service.dart';
 import '../services/storage_service.dart';
 import '../widgets/message_bubble.dart';
 import '../widgets/typing_indicator.dart';
-import 'backend_service.dart';
+import '../services/backend_service.dart';
 import 'auth_screen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
