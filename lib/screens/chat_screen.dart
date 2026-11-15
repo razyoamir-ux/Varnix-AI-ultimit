@@ -6,7 +6,9 @@ import '../services/api_service.dart';
 import '../services/storage_service.dart';
 import '../widgets/message_bubble.dart';
 import '../widgets/typing_indicator.dart';
-import 'owner_panel_screen.dart';
+import 'backend_service.dart';
+import 'auth_screen.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key});
@@ -23,7 +25,6 @@ class _ChatScreenState extends State<ChatScreen> {
 
   List<ChatMessage> _messages = [];
   AppSettings _settings = AppSettings();
-  String _apiKey = '';
   bool _isLoading = false;
   bool _isInitialized = false;
 
@@ -36,11 +37,12 @@ class _ChatScreenState extends State<ChatScreen> {
   Future<void> _loadData() async {
     final settings = await _storage.loadSettings();
     final history = await _storage.loadChatHistory();
-    final apiKey = await _storage.getApiKey() ?? '';
+    final remoteSettings = await BackendService.loadRemoteSettings(settings);
+    await _storage.saveSettings(remoteSettings);
+    if (!mounted) return;
     setState(() {
-      _settings = settings;
+      _settings = remoteSettings;
       _messages = history;
-      _apiKey = apiKey;
       _isInitialized = true;
     });
     _scrollToBottom();
@@ -81,8 +83,6 @@ class _ChatScreenState extends State<ChatScreen> {
       final reply = await _api.sendMessage(
         history: _messages.sublist(0, _messages.length - 1),
         userMessage: text,
-        settings: _settings,
-        apiKey: _apiKey,
       );
 
       final aiMsg = ChatMessage(
@@ -241,22 +241,29 @@ class _ChatScreenState extends State<ChatScreen> {
                   },
                 ),
                 ListTile(
-                  leading: const Icon(Icons.admin_panel_settings, color: Color(0xFFA78BFA)),
-                  title: const Text('پنل مالک', style: TextStyle(color: Colors.white)),
+                  leading: const Icon(Icons.sync, color: Color(0xFFA78BFA)),
+                  title: const Text('دریافت تنظیمات جدید', style: TextStyle(color: Colors.white)),
                   onTap: () async {
                     Navigator.pop(ctx);
-                    final result = await Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => OwnerPanelScreen(
-                          settings: _settings,
-                          apiKey: _apiKey,
-                        ),
-                      ),
-                    );
-                    if (result == true) {
-                      await _loadData();
+                    await _loadData();
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('تنظیمات از سرور به‌روزرسانی شد')),
+                      );
                     }
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.logout, color: Colors.orangeAccent),
+                  title: const Text('خروج از حساب کاربری', style: TextStyle(color: Colors.white)),
+                  onTap: () async {
+                    Navigator.pop(ctx);
+                    await Supabase.instance.client.auth.signOut();
+                    if (!mounted) return;
+                    Navigator.of(context).pushAndRemoveUntil(
+                      MaterialPageRoute(builder: (_) => const AuthScreen()),
+                      (route) => false,
+                    );
                   },
                 ),
                 const SizedBox(height: 16),
