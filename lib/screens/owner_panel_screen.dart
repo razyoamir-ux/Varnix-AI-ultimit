@@ -42,6 +42,7 @@ class _OwnerPanelScreenState extends State<OwnerPanelScreen> {
   List<Map<String, dynamic>> _users = [];
   List<Map<String, dynamic>> _purchases = [];
   List<Map<String, dynamic>> _conversations = [];
+  Map<String, dynamic> _dashboardStats = {};
 
   Future<void> _loadPurchases() async {
     final rows = await BackendService.client
@@ -115,6 +116,7 @@ class _OwnerPanelScreenState extends State<OwnerPanelScreen> {
     try {
       _allowed = await BackendService.isCurrentUserAdmin();
       if (!_allowed) return;
+      await _loadDashboardStats();
       final config = await BackendService.loadAppConfig();
       _name.text = config['app_name']?.toString() ?? 'Varnix AI';
       _model.text = config['default_model']?.toString() ?? 'openrouter/free';
@@ -152,6 +154,48 @@ class _OwnerPanelScreenState extends State<OwnerPanelScreen> {
     } finally {
       if (mounted) setState(() => _loading = false);
     }
+  }
+
+  Future<void> _loadDashboardStats() async {
+    try {
+      final result = await BackendService.client.rpc('admin_dashboard_summary');
+      if (result is Map) {
+        _dashboardStats = Map<String, dynamic>.from(result);
+      }
+      if (mounted) setState(() {});
+    } catch (e) {
+      _notify('بارگذاری آمار پنل انجام نشد: $e');
+    }
+  }
+
+  String _statValue(String key) => (_dashboardStats[key] ?? 0).toString();
+
+  Widget _statCard(String title, String value, IconData icon) {
+    return Card(
+      color: const Color(0xFF211A35),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Row(
+              children: [
+                Icon(icon, size: 18, color: Colors.white70),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(color: Colors.white70, fontSize: 12)),
+                ),
+              ],
+            ),
+            const SizedBox(height: 7),
+            Text(value, maxLines: 1, overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
+          ],
+        ),
+      ),
+    );
   }
 
   Future<void> _loadUsers() async {
@@ -512,6 +556,35 @@ class _OwnerPanelScreenState extends State<OwnerPanelScreen> {
                 : ListView(
                     padding: const EdgeInsets.all(18),
                     children: [
+                      Row(
+                        children: [
+                          const Expanded(
+                            child: Text('نمای کلی وارنیکس',
+                              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                          ),
+                          IconButton(
+                            tooltip: 'به‌روزرسانی آمار',
+                            onPressed: _loadDashboardStats,
+                            icon: const Icon(Icons.refresh),
+                          ),
+                        ],
+                      ),
+                      GridView.count(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        crossAxisCount: 2,
+                        childAspectRatio: 2.25,
+                        mainAxisSpacing: 6,
+                        crossAxisSpacing: 6,
+                        children: [
+                          _statCard('کل کاربران', _statValue('total_users'), Icons.people_alt_outlined),
+                          _statCard('اشتراک‌های فعال', _statValue('active_pro_users'), Icons.workspace_premium_outlined),
+                          _statCard('خریدهای موفق', _statValue('paid_orders'), Icons.shopping_bag_outlined),
+                          _statCard('پرداخت‌های در انتظار', _statValue('pending_orders'), Icons.hourglass_empty),
+                          _statCard('فروش تأییدشده', '${_statValue('revenue')} تومان', Icons.payments_outlined),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
                       const Text('تنظیمات عمومی',
                         style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                       const SizedBox(height: 14),
