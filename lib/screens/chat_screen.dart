@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/chat_message.dart';
 import '../models/app_settings.dart';
@@ -27,6 +29,9 @@ class _ChatScreenState extends State<ChatScreen> {
   AppSettings _settings = AppSettings();
   bool _isLoading = false;
   bool _isInitialized = false;
+  bool _isPro = false;
+  String _selectedModel = 'openrouter/free';
+  List<Map<String, dynamic>> _availableModels = [];
 
   @override
   void initState() {
@@ -38,11 +43,39 @@ class _ChatScreenState extends State<ChatScreen> {
     final settings = await _storage.loadSettings();
     final history = await _storage.loadChatHistory();
     final remoteSettings = await BackendService.loadRemoteSettings(settings);
+    var isPro = false;
+    try {
+      final user = Supabase.instance.client.auth.currentUser;
+      if (user != null) {
+        final profile = await Supabase.instance.client.from('profiles').select('plan_code,plan_expires_at').eq('id', user.id).maybeSingle();
+        final plan = (profile?['plan_code'] ?? 'free').toString().toLowerCase();
+        final expiry = profile?['plan_expires_at'];
+        isPro = plan == 'owner' || (plan == 'pro' && (expiry == null || DateTime.tryParse(expiry.toString())?.isAfter(DateTime.now()) == true));
+      }
+    } catch (_) {}
+    List<Map<String, dynamic>> models = [];
+    try {
+      final rows = await Supabase.instance.client.from('ai_models').select('model_id,display_name,provider,requires_pro,is_active').eq('is_active', true).order('sort_order');
+      models = List<Map<String, dynamic>>.from(rows);
+    } catch (_) {}
+    if (models.isEmpty) {
+      models = [
+        {'model_id':'openrouter/free','display_name':'OpenRouter Free','requires_pro':false},
+        {'model_id':'deepseek/deepseek-v4.1-flash-1017:free','display_name':'DeepSeek V4.1 Flash','requires_pro':false},
+        {'model_id':'nvidia/nemotron-3.5-super-vl:free','display_name':'NVIDIA Nemotron 3.5 Super VL','requires_pro':true},
+      ];
+    }
+    final savedModel = remoteSettings.model;
     await _storage.saveSettings(remoteSettings);
     if (!mounted) return;
     setState(() {
       _settings = remoteSettings;
       _messages = history;
+      _isPro = isPro;
+      _availableModels = models;
+      _selectedModel = models.any((m) => m['model_id'] == savedModel && (isPro || m['requires_pro'] != true))
+          ? savedModel
+          : (models.firstWhere((m) => m['requires_pro'] != true, orElse: () => models.first)['model_id'] as String);
       _isInitialized = true;
     });
     _scrollToBottom();
@@ -83,6 +116,7 @@ class _ChatScreenState extends State<ChatScreen> {
       final reply = await _api.sendMessage(
         history: _messages.sublist(0, _messages.length - 1),
         userMessage: text,
+        model: _selectedModel,
       );
 
       final aiMsg = ChatMessage(
@@ -113,6 +147,42 @@ class _ChatScreenState extends State<ChatScreen> {
     _scrollToBottom();
   }
 
+  Future<void> _searchMessages() async {
+    final controller = TextEditingController();
+    final query = await showDialog<String>(
+      context: context,
+      builder: (ctx) => Directionality(textDirection: TextDirection.rtl, child: AlertDialog(
+        backgroundColor: const Color(0xFF1E1E2E),
+        title: const Text('جست‌وجو در گفتگو', style: TextStyle(color: Colors.white)),
+        content: TextField(controller: controller, autofocus: true, style: const TextStyle(color: Colors.white), decoration: const InputDecoration(hintText: 'عبارت موردنظر را بنویسید', hintStyle: TextStyle(color: Colors.white54)), onSubmitted: (v) => Navigator.pop(ctx, v.trim())),
+        actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('انصراف')), TextButton(onPressed: () => Navigator.pop(ctx, controller.text.trim()), child: const Text('جست‌وجو'))],
+      )),
+    );
+    controller.dispose();
+    if (query == null || query.isEmpty || !mounted) return;
+    final matches = _messages.where((m) => m.content.toLowerCase().contains(query.toLowerCase())).toList();
+    await showDialog<void>(context: context, builder: (ctx) => Directionality(textDirection: TextDirection.rtl, child: AlertDialog(
+      backgroundColor: const Color(0xFF1E1E2E),
+      title: Text('نتایج جست‌وجو (${matches.length})', style: const TextStyle(color: Colors.white)),
+      content: SizedBox(width: double.maxFinite, child: matches.isEmpty
+        ? const Text('موردی پیدا نشد.', style: TextStyle(color: Colors.white70))
+        : ListView.separated(shrinkWrap: true, itemCount: matches.length, separatorBuilder: (_, __) => const Divider(color: Colors.white12), itemBuilder: (_, i) => ListTile(dense: true, title: Text(matches[i].role == 'user' ? 'پیام شما' : 'پاسخ وارنیکس', style: const TextStyle(color: Colors.white70, fontSize: 12)), subtitle: Text(matches[i].content, maxLines: 3, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white))))),
+      actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('بستن'))],
+    )));
+  }
+
+  String _conversationText() => _messages.map((m) => '${m.role == 'user' ? 'شما' : _settings.aiName}:\n${m.content}').join('\n\n');
+
+  Future<void> _copyFullConversation() async {
+    if (_messages.isEmpty) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('گفتگویی برای کپی وجود ندارد'))); return; }
+    await Clipboard.setData(ClipboardData(text: _conversationText()));
+    if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('کل گفتگو کپی شد')));
+  }
+
+  Future<void> _shareConversation() async {
+    if (_messages.isEmpty) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('گفتگویی برای اشتراک‌گذاری وجود ندارد'))); return; }
+    await Share.share(_conversationText(), subject: 'گفتگو با وارنیکس');
+  }
   Future<void> _clearHistory() async {
     final confirm = await showDialog<bool>(
       context: context,
@@ -159,6 +229,34 @@ class _ChatScreenState extends State<ChatScreen> {
         ),
       );
     }
+  }
+
+  Future<void> _chooseModel() async {
+    final selectable = _availableModels.where((m) => _isPro || m['requires_pro'] != true).toList();
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: const Color(0xFF1A1A2E),
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: SafeArea(child: Column(mainAxisSize: MainAxisSize.min, children: [
+          const Padding(padding: EdgeInsets.all(16), child: Text('انتخاب مدل هوش مصنوعی', style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold))),
+          ...selectable.map((m) => ListTile(
+            leading: Icon(m['requires_pro'] == true ? Icons.workspace_premium : Icons.auto_awesome, color: const Color(0xFFA78BFA)),
+            title: Text((m['display_name'] ?? m['model_id']).toString(), style: const TextStyle(color: Colors.white)),
+            subtitle: Text(m['requires_pro'] == true ? 'حرفه‌ای' : 'رایگان', style: const TextStyle(color: Colors.white54)),
+            trailing: _selectedModel == m['model_id'] ? const Icon(Icons.check_circle, color: Colors.greenAccent) : null,
+            onTap: () {
+              setState(() { _selectedModel = m['model_id'].toString(); _settings.model = _selectedModel; });
+              _storage.saveSettings(_settings);
+              Navigator.pop(ctx);
+            },
+          )),
+          if (!_isPro && _availableModels.any((m) => m['requires_pro'] == true))
+            const Padding(padding: EdgeInsets.all(12), child: Text('برای استفاده از مدل‌های حرفه‌ای، پلن حرفه‌ای لازم است.', style: TextStyle(color: Colors.orangeAccent))),
+        ])),
+      ),
+    );
   }
 
   void _showMenu() {
@@ -231,6 +329,21 @@ class _ChatScreenState extends State<ChatScreen> {
                       'به‌زودی در مایکت',
                     );
                   },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.search, color: Color(0xFFA78BFA)),
+                  title: const Text('جست‌وجو در گفتگو', style: TextStyle(color: Colors.white)),
+                  onTap: () { Navigator.pop(ctx); _searchMessages(); },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.copy_all, color: Color(0xFFA78BFA)),
+                  title: const Text('کپی کل گفتگو', style: TextStyle(color: Colors.white)),
+                  onTap: () { Navigator.pop(ctx); _copyFullConversation(); },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.share, color: Color(0xFFA78BFA)),
+                  title: const Text('اشتراک‌گذاری گفتگو', style: TextStyle(color: Colors.white)),
+                  onTap: () { Navigator.pop(ctx); _shareConversation(); },
                 ),
                 ListTile(
                   leading: const Icon(Icons.delete_outline, color: Colors.redAccent),
@@ -319,7 +432,7 @@ class _ChatScreenState extends State<ChatScreen> {
                     ),
                   ),
                   Text(
-                    _isLoading ? 'در حال پاسخ‌گویی...' : 'آنلاین',
+                    _isLoading ? 'در حال پاسخ‌گویی...' : 'مدل: ${_availableModels.firstWhere((m) => m['model_id'] == _selectedModel, orElse: () => {'display_name': 'پیش‌فرض'})['display_name']}',
                     style: TextStyle(
                       fontSize: 12,
                       color: _isLoading
@@ -332,6 +445,7 @@ class _ChatScreenState extends State<ChatScreen> {
             ],
           ),
           actions: [
+            IconButton(icon: const Icon(Icons.tune, color: Colors.white70), tooltip: 'انتخاب مدل', onPressed: _chooseModel),
             IconButton(
               icon: const Icon(Icons.more_vert, color: Colors.white70),
               onPressed: _showMenu,

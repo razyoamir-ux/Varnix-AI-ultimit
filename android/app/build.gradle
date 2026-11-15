@@ -1,4 +1,3 @@
-
 plugins {
     id "com.android.application"
     id "kotlin-android"
@@ -15,7 +14,18 @@ if (localPropertiesFile.exists()) {
 }
 
 def flutterVersionCode = localProperties.getProperty('flutter.versionCode') ?: '1'
-def flutterVersionName = localProperties.getProperty('flutter.versionName') ?: '2.0.0'
+def flutterVersionName = localProperties.getProperty('flutter.versionName') ?: '2.0.1'
+
+def releaseStoreFile = System.getenv('KEYSTORE_PATH') ?: 'release-key.jks'
+def releaseStorePassword = System.getenv('STORE_PASSWORD')
+def releaseKeyAlias = System.getenv('KEY_ALIAS')
+def releaseKeyPassword = System.getenv('KEY_PASSWORD')
+def releaseKeyFile = file(releaseStoreFile)
+def hasReleaseKey = releaseStorePassword && releaseKeyAlias && releaseKeyPassword && releaseKeyFile.exists() && releaseKeyFile.length() > 0
+
+if (gradle.startParameter.taskNames.any { it.toLowerCase().contains('release') } && !hasReleaseKey) {
+    throw new GradleException('Release build blocked: provide a valid release keystore and KEYSTORE_PATH, STORE_PASSWORD, KEY_ALIAS, KEY_PASSWORD. Debug signing is never used for release builds.')
+}
 
 android {
     namespace "com.varnix.ai"
@@ -39,9 +49,20 @@ android {
         versionName flutterVersionName
     }
 
+    signingConfigs {
+        release {
+            if (hasReleaseKey) {
+                storeFile releaseKeyFile
+                storePassword releaseStorePassword
+                keyAlias releaseKeyAlias
+                keyPassword releaseKeyPassword
+            }
+        }
+    }
+
     buildTypes {
         release {
-            signingConfig signingConfigs.debug
+            signingConfig signingConfigs.release
             minifyEnabled false
             shrinkResources false
         }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:share_plus/share_plus.dart';
 import '../models/chat_message.dart';
 
 class MessageBubble extends StatelessWidget {
@@ -75,22 +76,26 @@ class MessageBubble extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 8),
-                GestureDetector(
-                  onTap: () {
+                IconButton(
+                  visualDensity: VisualDensity.compact,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                  tooltip: 'کپی پیام',
+                  onPressed: () {
                     Clipboard.setData(ClipboardData(text: message.content));
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('کپی شد'),
-                        duration: Duration(seconds: 1),
-                        behavior: SnackBarBehavior.floating,
-                      ),
+                      const SnackBar(content: Text('کپی شد'), duration: Duration(seconds: 1), behavior: SnackBarBehavior.floating),
                     );
                   },
-                  child: Icon(
-                    Icons.copy_rounded,
-                    size: 14,
-                    color: Colors.white.withOpacity(0.4),
-                  ),
+                  icon: Icon(Icons.copy_rounded, size: 14, color: Colors.white.withOpacity(0.55)),
+                ),
+                IconButton(
+                  visualDensity: VisualDensity.compact,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                  tooltip: 'اشتراک‌گذاری پیام',
+                  onPressed: () => Share.share(message.content, subject: 'پیام از وارنیکس'),
+                  icon: Icon(Icons.share_rounded, size: 14, color: Colors.white.withOpacity(0.55)),
                 ),
               ],
             ),

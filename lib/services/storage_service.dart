@@ -14,7 +14,6 @@ class StorageService {
   static const String _settingsKey = 'app_settings';
   static const String _chatHistoryKey = 'chat_history';
   static const String _apiKeyKey = 'api_key';
-  static const String _ownerPasswordKey = 'owner_password';
 
   // Settings
   Future<AppSettings> loadSettings() async {
@@ -46,16 +45,6 @@ class StorageService {
     await _secureStorage.delete(key: _apiKeyKey);
   }
 
-  // Owner Password (secure)
-  Future<String> getOwnerPassword() async {
-    final stored = await _secureStorage.read(key: _ownerPasswordKey);
-    return stored ?? '246810';
-  }
-
-  Future<void> saveOwnerPassword(String password) async {
-    await _secureStorage.write(key: _ownerPasswordKey, value: password);
-  }
-
   // Chat History
   Future<List<ChatMessage>> loadChatHistory() async {
     final prefs = await SharedPreferences.getInstance();
@@ -80,21 +69,18 @@ class StorageService {
     await prefs.remove(_chatHistoryKey);
   }
 
-  // Backup
+  // Backup: deliberately excludes API credentials and owner authentication secrets.
   Future<String?> createBackup() async {
     try {
       final settings = await loadSettings();
       final history = await loadChatHistory();
-      final apiKey = await getApiKey() ?? '';
-      final ownerPass = await getOwnerPassword();
 
+      final safeSettings = settings.toJson();
       final backupData = {
         'version': '2.0',
         'timestamp': DateTime.now().toIso8601String(),
-        'settings': settings.toJson(),
+        'settings': safeSettings,
         'chatHistory': history.map((m) => m.toJson()).toList(),
-        'apiKey': apiKey,
-        'ownerPassword': ownerPass,
       };
 
       final dir = await getExternalStorageDirectory();
@@ -132,12 +118,6 @@ class StorageService {
             .map((e) => ChatMessage.fromJson(e))
             .toList();
         await saveChatHistory(list);
-      }
-      if (data['apiKey'] != null && (data['apiKey'] as String).isNotEmpty) {
-        await saveApiKey(data['apiKey']);
-      }
-      if (data['ownerPassword'] != null) {
-        await saveOwnerPassword(data['ownerPassword']);
       }
       return true;
     } catch (_) {
