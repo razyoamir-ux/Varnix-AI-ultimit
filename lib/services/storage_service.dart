@@ -75,7 +75,7 @@ class StorageService {
       final settings = await loadSettings();
       final history = await loadChatHistory();
 
-      final safeSettings = settings.toJson()..remove('ownerPassword');
+      final safeSettings = settings.toJson();
       final backupData = {
         'version': '2.0',
         'timestamp': DateTime.now().toIso8601String(),
