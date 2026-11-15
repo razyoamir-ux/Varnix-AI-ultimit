@@ -14,7 +14,6 @@ class StorageService {
   static const String _settingsKey = 'app_settings';
   static const String _chatHistoryKey = 'chat_history';
   static const String _apiKeyKey = 'api_key';
-  static const String _ownerPasswordKey = 'owner_password';
 
   // Settings
   Future<AppSettings> loadSettings() async {
@@ -44,16 +43,6 @@ class StorageService {
 
   Future<void> deleteApiKey() async {
     await _secureStorage.delete(key: _apiKeyKey);
-  }
-
-  // Owner Password (secure)
-  Future<String> getOwnerPassword() async {
-    final stored = await _secureStorage.read(key: _ownerPasswordKey);
-    return stored ?? '246810';
-  }
-
-  Future<void> saveOwnerPassword(String password) async {
-    await _secureStorage.write(key: _ownerPasswordKey, value: password);
   }
 
   // Chat History
