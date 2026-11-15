@@ -338,7 +338,10 @@ class _ChatScreenState extends State<ChatScreen> {
       if (mounted) setState(() {});
     } catch (e) {
       if (!mounted) return;
-      setState(() => _sending = false);
+      setState(() {
+        _sending = false;
+        _attachments = sendingAttachments;
+      });
       _showError(e.toString().replaceFirst('Exception: ', ''));
     }
     _scrollToBottom();
