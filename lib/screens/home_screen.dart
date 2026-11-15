@@ -338,6 +338,31 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
     }
     setState(() => modelsLoading = true);
     try {
+      if (providerId == 'openrouter') {
+        final rows = await BackendService.client
+            .from('ai_models')
+            .select('model_id')
+            .eq('provider', 'openrouter')
+            .eq('is_active', true)
+            .order('sort_order');
+        final ids = rows
+            .map((row) => row['model_id']?.toString() ?? '')
+            .where((id) => id.isNotEmpty)
+            .toList();
+        if (ids.isEmpty) {
+          throw Exception('فعلاً مدلی از طرف مالک فعال نشده است.');
+        }
+        if (!mounted) return;
+        setState(() {
+          availableModels = ids;
+          if (!ids.contains(providerModel)) providerModel = ids.first;
+          _manualModelController.text = providerModel;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('${ids.length} مدل فعال از فهرست مرکزی دریافت شد.')),
+        );
+        return;
+      }
       final modelsUri = Uri.parse('${info['url']}/models').replace(
         queryParameters: providerId == 'openrouter'
             ? const {
