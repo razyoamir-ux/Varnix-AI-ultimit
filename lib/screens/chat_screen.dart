@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/chat_message.dart';
 import '../models/app_settings.dart';
@@ -145,6 +147,42 @@ class _ChatScreenState extends State<ChatScreen> {
     _scrollToBottom();
   }
 
+  Future<void> _searchMessages() async {
+    final controller = TextEditingController();
+    final query = await showDialog<String>(
+      context: context,
+      builder: (ctx) => Directionality(textDirection: TextDirection.rtl, child: AlertDialog(
+        backgroundColor: const Color(0xFF1E1E2E),
+        title: const Text('جست‌وجو در گفتگو', style: TextStyle(color: Colors.white)),
+        content: TextField(controller: controller, autofocus: true, style: const TextStyle(color: Colors.white), decoration: const InputDecoration(hintText: 'عبارت موردنظر را بنویسید', hintStyle: TextStyle(color: Colors.white54)), onSubmitted: (v) => Navigator.pop(ctx, v.trim())),
+        actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('انصراف')), TextButton(onPressed: () => Navigator.pop(ctx, controller.text.trim()), child: const Text('جست‌وجو'))],
+      )),
+    );
+    controller.dispose();
+    if (query == null || query.isEmpty || !mounted) return;
+    final matches = _messages.where((m) => m.content.toLowerCase().contains(query.toLowerCase())).toList();
+    await showDialog<void>(context: context, builder: (ctx) => Directionality(textDirection: TextDirection.rtl, child: AlertDialog(
+      backgroundColor: const Color(0xFF1E1E2E),
+      title: Text('نتایج جست‌وجو (${matches.length})', style: const TextStyle(color: Colors.white)),
+      content: SizedBox(width: double.maxFinite, child: matches.isEmpty
+        ? const Text('موردی پیدا نشد.', style: TextStyle(color: Colors.white70))
+        : ListView.separated(shrinkWrap: true, itemCount: matches.length, separatorBuilder: (_, __) => const Divider(color: Colors.white12), itemBuilder: (_, i) => ListTile(dense: true, title: Text(matches[i].role == 'user' ? 'پیام شما' : 'پاسخ وارنیکس', style: const TextStyle(color: Colors.white70, fontSize: 12)), subtitle: Text(matches[i].content, maxLines: 3, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white))))),
+      actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('بستن'))],
+    )));
+  }
+
+  String _conversationText() => _messages.map((m) => '${m.role == 'user' ? 'شما' : _settings.aiName}:\n${m.content}').join('\n\n');
+
+  Future<void> _copyFullConversation() async {
+    if (_messages.isEmpty) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('گفتگویی برای کپی وجود ندارد'))); return; }
+    await Clipboard.setData(ClipboardData(text: _conversationText()));
+    if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('کل گفتگو کپی شد')));
+  }
+
+  Future<void> _shareConversation() async {
+    if (_messages.isEmpty) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('گفتگویی برای اشتراک‌گذاری وجود ندارد'))); return; }
+    await Share.share(_conversationText(), subject: 'گفتگو با وارنیکس');
+  }
   Future<void> _clearHistory() async {
     final confirm = await showDialog<bool>(
       context: context,
@@ -291,6 +329,21 @@ class _ChatScreenState extends State<ChatScreen> {
                       'به‌زودی در مایکت',
                     );
                   },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.search, color: Color(0xFFA78BFA)),
+                  title: const Text('جست‌وجو در گفتگو', style: TextStyle(color: Colors.white)),
+                  onTap: () { Navigator.pop(ctx); _searchMessages(); },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.copy_all, color: Color(0xFFA78BFA)),
+                  title: const Text('کپی کل گفتگو', style: TextStyle(color: Colors.white)),
+                  onTap: () { Navigator.pop(ctx); _copyFullConversation(); },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.share, color: Color(0xFFA78BFA)),
+                  title: const Text('اشتراک‌گذاری گفتگو', style: TextStyle(color: Colors.white)),
+                  onTap: () { Navigator.pop(ctx); _shareConversation(); },
                 ),
                 ListTile(
                   leading: const Icon(Icons.delete_outline, color: Colors.redAccent),
