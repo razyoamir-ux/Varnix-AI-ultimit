@@ -14,13 +14,13 @@ class _OwnerPanelScreenState extends State<OwnerPanelScreen> with SingleTickerPr
   Map<String,dynamic> config={};
   final fields=<String,TextEditingController>{};
   final toggles=<String,bool>{};
-  List<Map<String,dynamic>> users=[],models=[],assistants=[],plans=[],purchases=[];
+  List<Map<String,dynamic>> users=[],models=[],assistants=[],plans=[],purchases=[],providerKeys=[];
   Map<String,int> stats={};
   static const purple=Color(0xFFA78BFA),panel=Color(0xFF1E1B32);
   static const boolKeys={'payment_enabled','ads_enabled','ad_banner_enabled','ad_interstitial_enabled','ad_rewarded_enabled'};
   static const intKeys={'pro_duration_days','pro_base_price','free_daily_message_limit','free_daily_image_limit','free_daily_file_limit','free_daily_video_limit','free_voice_economic_minutes','free_voice_advanced_minutes','pro_daily_image_generation_limit','pro_daily_video_generation_limit','pro_daily_image_input_limit','pro_daily_file_input_limit','free_max_attachment_mb','pro_max_attachment_mb'};
   static const keys=['app_name','default_model','api_base_url','system_prompt','rubika_url','myket_url','pro_price','pro_duration_days','announcement','payment_provider','payment_enabled','pro_base_price','free_daily_message_limit','free_daily_image_limit','free_daily_file_limit','free_daily_video_limit','free_voice_economic_minutes','free_voice_advanced_minutes','pro_daily_image_generation_limit','pro_daily_video_generation_limit','ads_enabled','ad_provider','ad_banner_enabled','ad_banner_placement','ad_banner_unit_id','ad_interstitial_enabled','ad_interstitial_unit_id','ad_rewarded_enabled','ad_rewarded_unit_id','pro_daily_image_input_limit','pro_daily_file_input_limit','free_max_attachment_mb','pro_max_attachment_mb'];
-  @override void initState(){super.initState();tabs=TabController(length:7,vsync:this);authorize();}
+  @override void initState(){super.initState();tabs=TabController(length:8,vsync:this);authorize();}
   String err(Object e)=>e.toString().replaceFirst('Exception: ','');
   Future<void> authorize() async {
     try{
@@ -31,6 +31,11 @@ class _OwnerPanelScreenState extends State<OwnerPanelScreen> with SingleTickerPr
       if(!mounted)return;setState(()=>allowed=true);setState(()=>checking=false);await reload();
     }catch(e){if(mounted)setState((){checking=false;errorText=err(e);});}
   }
+  Future<Map<String,dynamic>> adminCall(Map<String,dynamic> body) async {
+    final response=await db.functions.invoke('owner-admin',body:body);
+    if(response.data is! Map) throw Exception('پاسخ سرور معتبر نیست.');
+    return Map<String,dynamic>.from(response.data as Map);
+  }
   Future<void> reload() async {
     if(!mounted)return;setState(()=>busy=true);
     try{
@@ -39,19 +44,74 @@ class _OwnerPanelScreenState extends State<OwnerPanelScreen> with SingleTickerPr
         db.from('profiles').select('id,email,display_name,role,plan_code,plan_expires_at,created_at').order('created_at',ascending:false).limit(200),
         db.from('ai_models').select().order('sort_order'),db.from('assistants').select().order('sort_order'),
         db.from('subscription_plans').select().order('sort_order'),
-        db.from('purchases').select('id,user_id,plan_code,amount,currency,provider,status,created_at').order('created_at',ascending:false).limit(100),
-        db.from('ai_usage').select('request_count')
+        db.from('purchases').select('id,user_id,plan_code,amount,currency,provider,status,created_at').order('created_at',ascending:false).limit(100)
       ]);
       config=Map<String,dynamic>.from((r[0] as Map<String,dynamic>?)??{});
       for(final k in keys){if(boolKeys.contains(k)){toggles[k]=config[k]==true;}else{fields.putIfAbsent(k,()=>TextEditingController());fields[k]!.text=config[k]?.toString()??'';}}
       users=List<Map<String,dynamic>>.from(r[1] as List);models=List<Map<String,dynamic>>.from(r[2] as List);
       assistants=List<Map<String,dynamic>>.from(r[3] as List);plans=List<Map<String,dynamic>>.from(r[4] as List);
       purchases=List<Map<String,dynamic>>.from(r[5] as List);
-      final usage=List<Map<String,dynamic>>.from(r[8] as List);
-      stats={'کاربران':users.length,'درخواست‌ها':usage.fold<int>(0,(a,b)=>a+((b['request_count'] as num?)?.toInt()??0)),'خریدهای اخیر':purchases.length,'مدل‌های فعال':models.where((m)=>m['is_active']==true).length};
+      final statData=await adminCall({'action':'stats'});
+      final keyData=await adminCall({'action':'list'});
+      stats={
+        'کاربران':(statData['users'] as num?)?.toInt()??0,
+        'گفتگوها':(statData['conversations'] as num?)?.toInt()??0,
+        'پیام‌ها':(statData['messages'] as num?)?.toInt()??0,
+        'خریدها':(statData['purchases'] as num?)?.toInt()??0,
+        'مدل‌های فعال':(statData['active_models'] as num?)?.toInt()??0,
+        'درخواست‌های هوش مصنوعی':(statData['total_ai_requests'] as num?)?.toInt()??0
+      };
+      providerKeys=List<Map<String,dynamic>>.from((keyData['data'] as List?)??[]);
       if(mounted)setState((){});
     }catch(e){toast('بارگذاری ناموفق: '+err(e),true);}finally{if(mounted)setState(()=>busy=false);}
   }
+  Future<void> addProviderKey() async {
+    final label=TextEditingController(),secret=TextEditingController();
+    String provider='openrouter';
+    final result=await showDialog<Map<String,String>>(context:context,builder:(c)=>StatefulBuilder(builder:(c,sd)=>AlertDialog(
+      backgroundColor:panel,title:const Text('افزودن کلید API'),
+      content:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[
+        DropdownButtonFormField<String>(value:provider,decoration:const InputDecoration(labelText:'ارائه‌دهنده'),items:const [
+          'openrouter','groq','gemini','mistral','deepseek','together','fireworks','cerebras','deepinfra','cohere','novita','nvidia','xai','openai','qwen','zai','moonshot','huggingface','sambanova','siliconflow','minimax'
+        ].map((v)=>DropdownMenuItem(value:v,child:Text(v))).toList(),onChanged:(v)=>sd(()=>provider=v??'openrouter')),
+        df('عنوان نمایشی',label),
+        TextField(controller:secret,obscureText:true,decoration:const InputDecoration(labelText:'کلید API',helperText:'کلید فقط به سرور امن ارسال می‌شود و دوباره نمایش داده نمی‌شود.'))
+      ])),
+      actions:[TextButton(onPressed:()=>Navigator.pop(c),child:const Text('انصراف')),FilledButton(onPressed:()=>Navigator.pop(c,{'provider':provider,'label':label.text.trim(),'api_key':secret.text.trim()}),child:const Text('ثبت امن'))]
+    )));
+    if(result!=null){try{
+      if((result['label']??'').isEmpty||(result['api_key']??'').length<8)throw Exception('عنوان و کلید معتبر لازم است.');
+      await adminCall({'action':'add',...result});await reload();toast('کلید در مخزن امن ثبت شد.');
+    }catch(e){toast(err(e),true);}}
+    label.dispose();secret.dispose();
+  }
+  Future<void> rotateProviderKey(Map<String,dynamic> key) async {
+    final secret=TextEditingController();
+    final value=await showDialog<String>(context:context,builder:(c)=>AlertDialog(
+      backgroundColor:panel,title:Text('تعویض کلید ${key['label']}'),
+      content:TextField(controller:secret,obscureText:true,decoration:const InputDecoration(labelText:'کلید جدید API')),
+      actions:[TextButton(onPressed:()=>Navigator.pop(c),child:const Text('انصراف')),FilledButton(onPressed:()=>Navigator.pop(c,secret.text.trim()),child:const Text('تعویض'))]
+    ));
+    if(value!=null){try{if(value.length<8)throw Exception('کلید معتبر نیست.');await adminCall({'action':'rotate','key_id':key['id'],'api_key':value});await reload();toast('کلید با موفقیت جایگزین شد.');}catch(e){toast(err(e),true);}}
+    secret.dispose();
+  }
+  Future<void> toggleProviderKey(Map<String,dynamic> key,bool active) async {
+    try{await adminCall({'action':'set_active','key_id':key['id'],'active':active});await reload();toast(active?'کلید فعال شد.':'کلید غیرفعال شد.');}
+    catch(e){toast(err(e),true);}
+  }
+  Widget providerKeysPage()=>Stack(children:[
+    RefreshIndicator(onRefresh:reload,child:ListView(padding:const EdgeInsets.all(10),children:[
+      const Padding(padding:EdgeInsets.all(12),child:Text('کلیدها در Supabase Vault رمزگذاری می‌شوند؛ مقدار کامل آن‌ها در اپ یا پاسخ سرور نمایش داده نمی‌شود.',style:TextStyle(color:Colors.white70))),
+      if(providerKeys.isEmpty)const Padding(padding:EdgeInsets.all(24),child:Text('هنوز کلیدی ثبت نشده است.',textAlign:TextAlign.center))
+      else ...providerKeys.map((k)=>Card(color:panel,child:ListTile(
+        title:Text('${k['label']} • ${k['provider']}'),
+        subtitle:Text('•••• ${k['key_hint']??'----'}  •  ${k['is_active']==true?'فعال':'غیرفعال'}'),
+        trailing:PopupMenuButton<String>(onSelected:(v){if(v=='rotate')rotateProviderKey(k);},itemBuilder:(_)=>const [PopupMenuItem(value:'rotate',child:Text('تعویض کلید'))]),
+        leading:Switch(value:k['is_active']==true,onChanged:(v)=>toggleProviderKey(k,v),activeColor:purple)
+      )))
+    ])),
+    Positioned(left:15,bottom:15,child:FloatingActionButton(onPressed:addProviderKey,child:const Icon(Icons.add)))
+  ]);
   Future<void> saveConfig() async {
     final row=<String,dynamic>{'updated_at':DateTime.now().toUtc().toIso8601String()};
     for(final k in keys){
@@ -145,8 +205,8 @@ class _OwnerPanelScreenState extends State<OwnerPanelScreen> with SingleTickerPr
   @override Widget build(BuildContext context){
     if(checking)return const Scaffold(body:Center(child:CircularProgressIndicator()));
     if(!allowed)return Scaffold(appBar:AppBar(title:const Text('پنل مالک')),body:Center(child:Text(errorText??'دسترسی مجاز نیست.')));
-    final pages=[overview(),settingsPage(),usersPage(),modelsPage(),assistantsPage(),plansPage(),purchasesPage()];
-    return Directionality(textDirection:TextDirection.rtl,child:Scaffold(backgroundColor:const Color(0xFF0F0F1A),appBar:AppBar(title:const Text('پنل مدیریت وارنیکس'),actions:[IconButton(onPressed:busy?null:reload,icon:const Icon(Icons.refresh))],bottom:TabBar(controller:tabs,isScrollable:true,indicatorColor:purple,tabs:const [Tab(text:'نمای کلی'),Tab(text:'تنظیمات'),Tab(text:'کاربران'),Tab(text:'مدل‌ها'),Tab(text:'دستیارها'),Tab(text:'پلن‌ها'),Tab(text:'خریدها')])),body:Stack(children:[TabBarView(controller:tabs,children:pages),if(busy)const Align(alignment:Alignment.topCenter,child:LinearProgressIndicator())])));
+    final pages=[overview(),settingsPage(),usersPage(),modelsPage(),assistantsPage(),plansPage(),purchasesPage(),providerKeysPage()];
+    return Directionality(textDirection:TextDirection.rtl,child:Scaffold(backgroundColor:const Color(0xFF0F0F1A),appBar:AppBar(title:const Text('پنل مدیریت وارنیکس'),actions:[IconButton(onPressed:busy?null:reload,icon:const Icon(Icons.refresh))],bottom:TabBar(controller:tabs,isScrollable:true,indicatorColor:purple,tabs:const [Tab(text:'نمای کلی'),Tab(text:'تنظیمات'),Tab(text:'کاربران'),Tab(text:'مدل‌ها'),Tab(text:'دستیارها'),Tab(text:'پلن‌ها'),Tab(text:'خریدها'),Tab(text:'کلیدهای API')])),body:Stack(children:[TabBarView(controller:tabs,children:pages),if(busy)const Align(alignment:Alignment.topCenter,child:LinearProgressIndicator())])));
   }
   @override void dispose(){tabs.dispose();for(final c in fields.values){c.dispose();}super.dispose();}
 }
