@@ -54,7 +54,7 @@ class _MediaLibraryScreenState extends State<MediaLibraryScreen> {
         final path = '$_folder/${DateTime.now().microsecondsSinceEpoch}_$safeName';
         await BackendService.client.storage.from(_bucket).uploadBinary(
           path, bytes,
-          fileOptions: FileOptions(contentType: file.mimeType ?? 'application/octet-stream', upsert: false),
+          fileOptions: const FileOptions(contentType: 'application/octet-stream', upsert: false),
         );
       }
       _message('فایل‌ها با موفقیت به کتابخانه اضافه شدند. ✅');
