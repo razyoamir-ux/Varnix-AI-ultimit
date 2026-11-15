@@ -35,7 +35,7 @@ class _AuthScreenState extends State<AuthScreen> {
         final result = await Supabase.instance.client.auth.signUp(
           email: email,
           password: password,
-          emailRedirectTo: 'com.varnix.ai://login-callback/',
+          emailRedirectTo: 'com.varnix.ai.ultimateplus://login-callback/',
         );
         if (!mounted) return;
         if (result.session == null) {
