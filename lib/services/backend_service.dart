@@ -52,7 +52,7 @@ class BackendService {
     return Map<String, dynamic>.from(data);
   }
 
-  static Future<String> sendChat({required List<Map<String, String>> messages, String? assistantId, String? userInstructions, bool supportMode = false}) async {
+  static Future<String> sendChat({required List<Map<String, String>> messages, List<Map<String, dynamic>> attachments = const [], String? assistantId, String? userInstructions, bool supportMode = false}) async {
     const secureStorage = FlutterSecureStorage();
     final userId = currentUser?.id;
     final prefs = await SharedPreferences.getInstance();
@@ -65,6 +65,7 @@ class BackendService {
     try {
       response = await client.functions.invoke('chat', body: {
         'messages': messages,
+        if (attachments.isNotEmpty) 'attachments': attachments,
         'provider_id': providerId,
         if (selectedModel != null && selectedModel.isNotEmpty) 'model': selectedModel,
         if (personalKey != null && personalKey.isNotEmpty)
