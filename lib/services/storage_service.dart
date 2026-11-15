@@ -86,10 +86,11 @@ class StorageService {
       final settings = await loadSettings();
       final history = await loadChatHistory();
 
+      final safeSettings = settings.toJson()..remove('ownerPassword');
       final backupData = {
         'version': '2.0',
         'timestamp': DateTime.now().toIso8601String(),
-        'settings': settings.toJson(),
+        'settings': safeSettings,
         'chatHistory': history.map((m) => m.toJson()).toList(),
       };
 
