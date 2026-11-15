@@ -35,12 +35,20 @@ class _AuthScreenState extends State<AuthScreen> {
         final result = await Supabase.instance.client.auth.signUp(
           email: email,
           password: password,
+          emailRedirectTo: 'com.varnix.ai://login-callback/',
         );
         if (!mounted) return;
         if (result.session == null) {
-          setState(() => _message = 'حساب ساخته شد. ایمیلت را تأیید کن، سپس از همین صفحه وارد شو.');
+          setState(() => _message = 'حساب ساخته شد. ایمیلت را باز کن و روی لینک تأیید بزن؛ بعد از تأیید به وارنیکس برمی‌گردی.');
           return;
         }
+        // Never grant app access from the sign-up action itself.
+        // This also protects users if email confirmation is accidentally disabled server-side.
+        await Supabase.instance.client.auth.signOut();
+        if (mounted) {
+          setState(() => _message = 'تأیید ایمیل در سرور فعال نیست. تا فعال شدن تأیید ایمیل نمی‌توانی وارد شوی.');
+        }
+        return;
       } else {
         await Supabase.instance.client.auth.signInWithPassword(
           email: email,
