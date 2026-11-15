@@ -40,7 +40,7 @@ class _OwnerPanelScreenState extends State<OwnerPanelScreen> with SingleTickerPr
         db.from('ai_models').select().order('sort_order'),db.from('assistants').select().order('sort_order'),
         db.from('subscription_plans').select().order('sort_order'),
         db.from('purchases').select('id,user_id,plan_code,amount,currency,provider,status,created_at').order('created_at',ascending:false).limit(100),
-        db.from('conversations').select('id'),db.from('messages').select('id'),db.from('ai_usage').select('request_count')
+        db.from('ai_usage').select('request_count')
       ]);
       config=Map<String,dynamic>.from((r[0] as Map<String,dynamic>?)??{});
       for(final k in keys){if(boolKeys.contains(k)){toggles[k]=config[k]==true;}else{fields.putIfAbsent(k,()=>TextEditingController());fields[k]!.text=config[k]?.toString()??'';}}
@@ -48,7 +48,7 @@ class _OwnerPanelScreenState extends State<OwnerPanelScreen> with SingleTickerPr
       assistants=List<Map<String,dynamic>>.from(r[3] as List);plans=List<Map<String,dynamic>>.from(r[4] as List);
       purchases=List<Map<String,dynamic>>.from(r[5] as List);
       final usage=List<Map<String,dynamic>>.from(r[8] as List);
-      stats={'کاربران':users.length,'گفتگوها':(r[6] as List).length,'پیام‌ها':(r[7] as List).length,'درخواست‌ها':usage.fold<int>(0,(a,b)=>a+((b['request_count'] as num?)?.toInt()??0)),'خریدها':purchases.length,'مدل‌های فعال':models.where((m)=>m['is_active']==true).length};
+      stats={'کاربران':users.length,'درخواست‌ها':usage.fold<int>(0,(a,b)=>a+((b['request_count'] as num?)?.toInt()??0)),'خریدهای اخیر':purchases.length,'مدل‌های فعال':models.where((m)=>m['is_active']==true).length};
       if(mounted)setState((){});
     }catch(e){toast('بارگذاری ناموفق: '+err(e),true);}finally{if(mounted)setState(()=>busy=false);}
   }
