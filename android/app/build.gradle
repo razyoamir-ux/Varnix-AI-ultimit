@@ -29,7 +29,9 @@ if (gradle.startParameter.taskNames.any { it.toLowerCase().contains('release') }
 
 android {
     namespace "com.varnix.ai.ultimateplus"
-    compileSdk 34
+    // Current AndroidX plugins in this app require API 36 at compile time.
+    // This does not change the minimum supported Android version or runtime target.
+    compileSdk 36
     ndkVersion flutter.ndkVersion
 
     compileOptions {
