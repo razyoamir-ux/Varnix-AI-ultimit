@@ -61,6 +61,7 @@ class _OwnerPanelScreenState extends State<OwnerPanelScreen> with SingleTickerPr
     }
     final price=int.tryParse((row['pro_price']??'').toString().replaceAll(RegExp(r'[^0-9]'),''));
     if(price==null||price<1000){toast('قیمت حرفه‌ای باید حداقل ۱۰۰۰ تومان باشد.',true);return;}
+    if(!models.any((m)=>m['model_id']==row['default_model'] && m['is_active']==true)){toast('مدل پیش‌فرض باید در فهرست مدل‌ها موجود و فعال باشد.',true);return;}
     if(row['payment_enabled']==true && row['payment_provider'].toString().toLowerCase()!='nextpay'){toast('در نسخه فعلی فقط نکست‌پی در Edge Function پیاده‌سازی شده؛ فعال‌سازی درگاه دیگر امن نیست.',true);return;}
     try{setState(()=>busy=true);await db.from('app_config').update(row).eq('id',true);await reload();toast('تنظیمات مرکزی ذخیره شد.');}
     catch(e){toast('ذخیره ناموفق: '+err(e),true);}finally{if(mounted)setState(()=>busy=false);}
@@ -108,7 +109,7 @@ class _OwnerPanelScreenState extends State<OwnerPanelScreen> with SingleTickerPr
       Text(u['email']?.toString()??u['id'].toString()),DropdownButtonFormField<String>(value:plan=='pro'?'pro':'free',dropdownColor:panel,items:const [DropdownMenuItem(value:'free',child:Text('رایگان')),DropdownMenuItem(value:'pro',child:Text('حرفه‌ای'))],onChanged:(v)=>sd(()=>plan=v??'free')),
       df('انقضا YYYY-MM-DD HH:MM؛ خالی = بدون انقضا',exp)
     ]),actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('انصراف')),FilledButton(onPressed:()=>Navigator.pop(c,true),child:const Text('اعمال'))])));
-    if(ok==true){try{DateTime? dt;if(exp.text.trim().isNotEmpty){dt=DateTime.tryParse(exp.text.trim());if(dt==null)throw Exception('تاریخ معتبر نیست.');}
+    if(ok==true){try{DateTime? dt;if(exp.text.trim().isNotEmpty){dt=DateTime.tryParse(exp.text.trim());if(dt==null)throw Exception('تاریخ معتبر نیست.');}if(plan=='pro' && dt==null)throw Exception('برای اشتراک حرفه‌ای باید تاریخ انقضا تعیین شود.');
       await db.from('profiles').update({'plan_code':plan,'plan_expires_at':dt?.toUtc().toIso8601String(),'updated_at':DateTime.now().toUtc().toIso8601String()}).eq('id',u['id']);await reload();toast('اشتراک به‌روزرسانی شد.');
     }catch(e){toast(err(e),true);}}
     exp.dispose();
