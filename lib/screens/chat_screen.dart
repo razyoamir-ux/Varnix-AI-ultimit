@@ -10,6 +10,7 @@ import '../widgets/message_bubble.dart';
 import '../widgets/typing_indicator.dart';
 import '../services/backend_service.dart';
 import 'auth_screen.dart';
+import 'owner_panel_screen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class ChatScreen extends StatefulWidget {
@@ -30,6 +31,7 @@ class _ChatScreenState extends State<ChatScreen> {
   bool _isLoading = false;
   bool _isInitialized = false;
   bool _isPro = false;
+  bool _isAdmin = false;
   String _selectedModel = 'openrouter/free';
   List<Map<String, dynamic>> _availableModels = [];
 
@@ -44,10 +46,12 @@ class _ChatScreenState extends State<ChatScreen> {
     final history = await _storage.loadChatHistory();
     final remoteSettings = await BackendService.loadRemoteSettings(settings);
     var isPro = false;
+    var isAdmin = false;
     try {
       final user = Supabase.instance.client.auth.currentUser;
       if (user != null) {
-        final profile = await Supabase.instance.client.from('profiles').select('plan_code,plan_expires_at').eq('id', user.id).maybeSingle();
+        final profile = await Supabase.instance.client.from('profiles').select('role,plan_code,plan_expires_at').eq('id', user.id).maybeSingle();
+        isAdmin = (profile?['role'] ?? '').toString().toLowerCase() == 'admin';
         final plan = (profile?['plan_code'] ?? 'free').toString().toLowerCase();
         final expiry = profile?['plan_expires_at'];
         isPro = plan == 'owner' || (plan == 'pro' && (expiry == null || DateTime.tryParse(expiry.toString())?.isAfter(DateTime.now()) == true));
@@ -72,6 +76,7 @@ class _ChatScreenState extends State<ChatScreen> {
       _settings = remoteSettings;
       _messages = history;
       _isPro = isPro;
+      _isAdmin = isAdmin;
       _availableModels = models;
       _selectedModel = models.any((m) => m['model_id'] == savedModel && (isPro || m['requires_pro'] != true))
           ? savedModel
@@ -445,6 +450,17 @@ class _ChatScreenState extends State<ChatScreen> {
             ],
           ),
           actions: [
+            if (_isAdmin)
+              IconButton(
+                icon: const Icon(Icons.admin_panel_settings, color: Color(0xFFA78BFA)),
+                tooltip: 'پنل مالک',
+                onPressed: () async {
+                  await Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const OwnerPanelScreen()),
+                  );
+                  if (mounted) await _loadData();
+                },
+              ),
             IconButton(icon: const Icon(Icons.tune, color: Colors.white70), tooltip: 'انتخاب مدل', onPressed: _chooseModel),
             IconButton(
               icon: const Icon(Icons.more_vert, color: Colors.white70),
