@@ -4,10 +4,24 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
+    <!-- Left violet stroke of the V -->
     <path
-        android:fillColor="#8B5CF6"
-        android:pathData="M54,30c-13.2,0 -24,10.8 -24,24s10.8,24 24,24 24,-10.8 24,-24 -10.8,-24 -24,-24zM54,70c-8.8,0 -16,-7.2 -16,-16s7.2,-16 16,-16 16,7.2 16,16 -7.2,16 -16,16z"/>
+        android:fillColor="#A855F7"
+        android:pathData="M20,27 L36,27 L55,66 L47,82 Z"/>
+    <!-- Right pearl-white stroke of the V -->
+    <path
+        android:fillColor="#F8F7FF"
+        android:pathData="M88,27 L72,27 L53,66 L61,82 Z"/>
+    <!-- Neon orbital sweep -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#D946EF"
+        android:strokeWidth="4.2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M15,68 C28,83 58,79 87,45"/>
+    <!-- Small cosmic sparkle -->
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M54,42c-1.1,0 -2,0.9 -2,2v8h-8c-1.1,0 -2,0.9 -2,2s0.9,2 2,2h8v8c0,1.1 0.9,2 2,2s2,-0.9 2,-2v-8h8c1.1,0 2,-0.9 2,-2s-0.9,-2 -2,-2h-8v-8c0,-1.1 -0.9,-2 -2,-2z"/>
+        android:pathData="M79,14 C80.2,19.8 82.2,21.8 88,23 C82.2,24.2 80.2,26.2 79,32 C77.8,26.2 75.8,24.2 70,23 C75.8,21.8 77.8,19.8 79,14 Z"/>
 </vector>
