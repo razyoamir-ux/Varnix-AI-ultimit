@@ -27,14 +27,10 @@ class _OwnerPanelScreenState extends State<OwnerPanelScreen> {
   late TextEditingController _paymentLinkCtrl;
   late TextEditingController _myketCtrl;
   late TextEditingController _paymentAmountCtrl;
-  late TextEditingController _passwordCtrl;
-  late TextEditingController _newPasswordCtrl;
-  late TextEditingController _confirmPasswordCtrl;
 
   bool _isAuthenticated = false;
   bool _obscureKey = true;
   bool _isSaving = false;
-  String _currentPassword = '246810';
 
   @override
   void initState() {
@@ -48,27 +44,37 @@ class _OwnerPanelScreenState extends State<OwnerPanelScreen> {
     _paymentLinkCtrl = TextEditingController(text: widget.settings.paymentLink);
     _myketCtrl = TextEditingController(text: widget.settings.myketLink);
     _paymentAmountCtrl = TextEditingController(text: widget.settings.paymentAmount);
-    _passwordCtrl = TextEditingController();
-    _newPasswordCtrl = TextEditingController();
-    _confirmPasswordCtrl = TextEditingController();
-    _loadPassword();
-  }
-
-  Future<void> _loadPassword() async {
-    _currentPassword = await _storage.getOwnerPassword();
   }
 
   Future<void> _authenticate() async {
-    if (_passwordCtrl.text == _currentPassword) {
-      setState(() => _isAuthenticated = true);
-    } else {
+    final client = Supabase.instance.client;
+    final user = client.auth.currentUser;
+    if (user == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('رمز اشتباه است'),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-        ),
+        const SnackBar(content: Text('ابتدا با حساب کاربری وارد شوید.')),
       );
+      return;
+    }
+    try {
+      final profile = await client
+          .from('profiles')
+          .select('role')
+          .eq('id', user.id)
+          .maybeSingle();
+      if (!mounted) return;
+      if ((profile?['role'] ?? '').toString().toLowerCase() == 'admin') {
+        setState(() => _isAuthenticated = true);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('این حساب دسترسی مالک ندارد.'), backgroundColor: Colors.red),
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('تأیید دسترسی مالک از سرور ناموفق بود.'), backgroundColor: Colors.red),
+        );
+      }
     }
   }
 
@@ -88,7 +94,6 @@ class _OwnerPanelScreenState extends State<OwnerPanelScreen> {
         paymentAmount: _paymentAmountCtrl.text.trim().isEmpty
             ? '۵۰٬۰۰۰ تومان'
             : _paymentAmountCtrl.text.trim(),
-        ownerPassword: _currentPassword,
       );
       await _storage.saveSettings(newSettings);
       await _storage.saveApiKey(_apiKeyCtrl.text.trim());
@@ -114,31 +119,6 @@ class _OwnerPanelScreenState extends State<OwnerPanelScreen> {
     }
   }
 
-  Future<void> _changePassword() async {
-    if (_newPasswordCtrl.text.isEmpty || _newPasswordCtrl.text.length < 4) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('رمز جدید باید حداقل ۴ کاراکتر باشد')),
-      );
-      return;
-    }
-    if (_newPasswordCtrl.text != _confirmPasswordCtrl.text) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('رمزها مطابقت ندارند')),
-      );
-      return;
-    }
-    await _storage.saveOwnerPassword(_newPasswordCtrl.text);
-    _currentPassword = _newPasswordCtrl.text;
-    _newPasswordCtrl.clear();
-    _confirmPasswordCtrl.clear();
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('رمز با موفقیت تغییر کرد'),
-        backgroundColor: Colors.green,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
-  }
 
   Future<void> _backup() async {
     final path = await _storage.createBackup();
@@ -289,15 +269,16 @@ class _OwnerPanelScreenState extends State<OwnerPanelScreen> {
                     const Icon(Icons.lock_outline, size: 64, color: Color(0xFF8B5CF6)),
                     const SizedBox(height: 24),
                     const Text(
-                      'ورود به پنل مالک',
+                      'ورود امن پنل مالک',
                       style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
                     ),
-                    const SizedBox(height: 32),
-                    _buildField(
-                      label: 'رمز عبور',
-                      controller: _passwordCtrl,
-                      obscure: true,
+                    const SizedBox(height: 12),
+                    const Text(
+                      'دسترسی فقط برای حسابی فعال است که نقش مدیر آن در سرور ثبت شده باشد.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Colors.white70, fontSize: 13),
                     ),
+                    const SizedBox(height: 32),
                     const SizedBox(height: 16),
                     SizedBox(
                       width: double.infinity,
@@ -343,25 +324,6 @@ class _OwnerPanelScreenState extends State<OwnerPanelScreen> {
                   _buildField(label: 'لینک پرداخت', controller: _paymentLinkCtrl),
                   _buildField(label: 'مبلغ پرداخت', controller: _paymentAmountCtrl),
                   _buildField(label: 'لینک مایکت', controller: _myketCtrl),
-                  const Divider(color: Colors.white12, height: 32),
-                  const Text(
-                    'تغییر رمز پنل',
-                    style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600),
-                  ),
-                  const SizedBox(height: 12),
-                  _buildField(label: 'رمز جدید', controller: _newPasswordCtrl, obscure: true),
-                  _buildField(label: 'تکرار رمز جدید', controller: _confirmPasswordCtrl, obscure: true),
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton(
-                      onPressed: _changePassword,
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: const Color(0xFFA78BFA),
-                        side: const BorderSide(color: Color(0xFF7C3AED)),
-                      ),
-                      child: const Text('تغییر رمز'),
-                    ),
-                  ),
                   const Divider(color: Colors.white12, height: 32),
                   const Text(
                     'پشتیبان‌گیری',
@@ -440,9 +402,6 @@ class _OwnerPanelScreenState extends State<OwnerPanelScreen> {
     _paymentLinkCtrl.dispose();
     _myketCtrl.dispose();
     _paymentAmountCtrl.dispose();
-    _passwordCtrl.dispose();
-    _newPasswordCtrl.dispose();
-    _confirmPasswordCtrl.dispose();
     super.dispose();
   }
 }
