@@ -15,7 +15,13 @@ if (localPropertiesFile.exists()) {
 }
 
 def flutterVersionCode = localProperties.getProperty('flutter.versionCode') ?: '1'
-def flutterVersionName = localProperties.getProperty('flutter.versionName') ?: '2.0.0'
+def flutterVersionName = localProperties.getProperty('flutter.versionName') ?: '2.0.1'
+
+def releaseStoreFile = System.getenv('KEYSTORE_PATH') ?: 'release-key.jks'
+def releaseStorePassword = System.getenv('STORE_PASSWORD')
+def releaseKeyAlias = System.getenv('KEY_ALIAS')
+def releaseKeyPassword = System.getenv('KEY_PASSWORD')
+def hasReleaseKey = releaseStorePassword && releaseKeyAlias && releaseKeyPassword && file(releaseStoreFile).exists()
 
 android {
     namespace "com.varnix.ai"
@@ -39,9 +45,20 @@ android {
         versionName flutterVersionName
     }
 
+    signingConfigs {
+        release {
+            if (hasReleaseKey) {
+                storeFile file(releaseStoreFile)
+                storePassword releaseStorePassword
+                keyAlias releaseKeyAlias
+                keyPassword releaseKeyPassword
+            }
+        }
+    }
+
     buildTypes {
         release {
-            signingConfig signingConfigs.debug
+            signingConfig hasReleaseKey ? signingConfigs.release : signingConfigs.debug
             minifyEnabled false
             shrinkResources false
         }
