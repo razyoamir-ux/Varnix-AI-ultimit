@@ -28,7 +28,7 @@ if (gradle.startParameter.taskNames.any { it.toLowerCase().contains('release') }
 }
 
 android {
-    namespace "com.varnix.ai"
+    namespace "com.varnix.ai.ultimateplus"
     compileSdk 34
     ndkVersion flutter.ndkVersion
 
@@ -42,7 +42,7 @@ android {
     }
 
     defaultConfig {
-        applicationId "com.varnix.ai"
+        applicationId "com.varnix.ai.ultimateplus"
         minSdk 28
         targetSdk 34
         versionCode flutterVersionCode.toInteger()
