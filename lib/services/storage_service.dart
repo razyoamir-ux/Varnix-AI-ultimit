@@ -80,21 +80,17 @@ class StorageService {
     await prefs.remove(_chatHistoryKey);
   }
 
-  // Backup
+  // Backup: deliberately excludes API credentials and owner authentication secrets.
   Future<String?> createBackup() async {
     try {
       final settings = await loadSettings();
       final history = await loadChatHistory();
-      final apiKey = await getApiKey() ?? '';
-      final ownerPass = await getOwnerPassword();
 
       final backupData = {
         'version': '2.0',
         'timestamp': DateTime.now().toIso8601String(),
         'settings': settings.toJson(),
         'chatHistory': history.map((m) => m.toJson()).toList(),
-        'apiKey': apiKey,
-        'ownerPassword': ownerPass,
       };
 
       final dir = await getExternalStorageDirectory();
@@ -132,12 +128,6 @@ class StorageService {
             .map((e) => ChatMessage.fromJson(e))
             .toList();
         await saveChatHistory(list);
-      }
-      if (data['apiKey'] != null && (data['apiKey'] as String).isNotEmpty) {
-        await saveApiKey(data['apiKey']);
-      }
-      if (data['ownerPassword'] != null) {
-        await saveOwnerPassword(data['ownerPassword']);
       }
       return true;
     } catch (_) {
