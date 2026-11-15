@@ -5,6 +5,7 @@ import '../models/chat_message.dart';
 /// when the account has no cloud messages yet. Remote history is never deleted.
 class CloudChatService {
   final SupabaseClient _db = Supabase.instance.client;
+  // Cached for this screen instance; each account gets its own RLS-scoped conversation.
   String? _conversationId;
 
   Future<String?> _ensureConversation() async {
