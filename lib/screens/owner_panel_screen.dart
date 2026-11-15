@@ -61,6 +61,7 @@ class _OwnerPanelScreenState extends State<OwnerPanelScreen> with SingleTickerPr
     }
     final price=int.tryParse((row['pro_price']??'').toString().replaceAll(RegExp(r'[^0-9]'),''));
     if(price==null||price<1000){toast('قیمت حرفه‌ای باید حداقل ۱۰۰۰ تومان باشد.',true);return;}
+    if(row['payment_enabled']==true && row['payment_provider'].toString().toLowerCase()!='nextpay'){toast('در نسخه فعلی فقط نکست‌پی در Edge Function پیاده‌سازی شده؛ فعال‌سازی درگاه دیگر امن نیست.',true);return;}
     try{setState(()=>busy=true);await db.from('app_config').update(row).eq('id',true);await reload();toast('تنظیمات مرکزی ذخیره شد.');}
     catch(e){toast('ذخیره ناموفق: '+err(e),true);}finally{if(mounted)setState(()=>busy=false);}
   }
