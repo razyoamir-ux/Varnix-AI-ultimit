@@ -25,6 +25,10 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.14.3'
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
@@ -48,6 +52,10 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.14.3'
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
