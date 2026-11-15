@@ -54,7 +54,7 @@ class _AuthScreenState extends State<AuthScreen> {
       );
     } on AuthException catch (e) {
       if (mounted) setState(() => _message = e.message);
-    } catch (e) {
+    } catch (_) {
       if (mounted) setState(() => _message = 'اتصال ناموفق بود. اینترنت را بررسی کن.');
     } finally {
       if (mounted) setState(() => _busy = false);
