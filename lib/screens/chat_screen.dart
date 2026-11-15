@@ -38,6 +38,7 @@ class _ChatScreenState extends State<ChatScreen> {
   String _userInstructions = '';
   String? _planExpiresAt;
   RealtimeChannel? _configChannel;
+  List<Map<String, dynamic>> _attachments = [];
 
   @override
   void initState() {
@@ -213,39 +214,98 @@ class _ChatScreenState extends State<ChatScreen> {
     return _conversationId!;
   }
 
+  Future<void> _chooseAttachments() async {
+    if (_sending) return;
+    try {
+      final user = BackendService.currentUser;
+      if (user == null) return;
+      final files = await BackendService.client.storage.from('varnix-media').list(
+        path: user.id,
+        searchOptions: const SearchOptions(limit: 100, sortBy: SortBy(column: 'created_at', order: 'desc')),
+      );
+      final available = files.where((f) => f.name != '.emptyFolderPlaceholder').toList();
+      if (!mounted) return;
+      if (available.isEmpty) {
+        _showError('کتابخانه خالی است؛ ابتدا فایل را از بخش کتابخانه بارگذاری کن.');
+        return;
+      }
+      final selected = await showDialog<List<Map<String, dynamic>>>(
+        context: context,
+        builder: (dialogContext) {
+          final picked = <String>{};
+          return StatefulBuilder(builder: (context, setDialogState) => AlertDialog(
+            title: const Text('انتخاب از کتابخانه'),
+            content: SizedBox(width: double.maxFinite, height: 360, child: ListView(
+              children: available.map((file) {
+                final name = file.name;
+                final ext = name.split('.').last.toLowerCase();
+                final image = ['jpg','jpeg','png','webp','gif'].contains(ext);
+                final supported = image || ['txt','md','csv','json'].contains(ext);
+                return CheckboxListTile(
+                  value: picked.contains(name),
+                  title: Text(name, maxLines: 1, overflow: TextOverflow.ellipsis),
+                  subtitle: Text(supported ? (image ? 'تصویر قابل ارسال' : 'فایل متنی قابل ارسال') : 'فعلاً برای تحلیل پشتیبانی نمی‌شود'),
+                  secondary: Icon(image ? Icons.image_outlined : Icons.insert_drive_file_outlined),
+                  onChanged: !supported ? null : (value) => setDialogState(() {
+                    if (value == true) { if (picked.length < 5) picked.add(name); }
+                    else { picked.remove(name); }
+                  }),
+                );
+              }).toList(),
+            )),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('انصراف')),
+              FilledButton(onPressed: () => Navigator.pop(dialogContext, available.where((f) => picked.contains(f.name)).map((f) {
+                final ext = f.name.split('.').last.toLowerCase();
+                final kind = ['jpg','jpeg','png','webp','gif'].contains(ext) ? 'image' : 'file';
+                return <String, dynamic>{'path': '${user.id}/${f.name}', 'name': f.name, 'kind': kind};
+              }).toList()), child: Text('افزودن (${picked.length}/5)')),
+            ],
+          ));
+        },
+      );
+      if (selected != null && mounted) setState(() => _attachments = selected);
+    } catch (e) {
+      _showError('دریافت کتابخانه ناموفق بود: $e');
+    }
+  }
+
   Future<void> _send() async {
     final text = _controller.text.trim();
-    if (text.isEmpty || _sending) return;
+    if ((text.isEmpty && _attachments.isEmpty) || _sending) return;
     final user = BackendService.currentUser;
     if (user == null) return;
 
+    final sendingAttachments = List<Map<String, dynamic>>.from(_attachments);
+    final displayText = [text, if (sendingAttachments.isNotEmpty) '📎 ${sendingAttachments.map((a) => a['name']).join('، ')}'].where((v) => v.isNotEmpty).join('\\n');
     setState(() {
       _sending = true;
       _controller.clear();
+      _attachments = [];
       _messages.add(ChatMessage(
         id: 'local-${DateTime.now().microsecondsSinceEpoch}',
         role: 'user',
-        content: text,
+        content: displayText,
         timestamp: DateTime.now(),
       ));
     });
     _scrollToBottom();
 
     try {
-      final conversationId = await _ensureConversation(text);
+      final conversationId = await _ensureConversation(text.isEmpty ? 'ارسال فایل' : text);
       final localUserId = _messages.last.id;
       final savedUser = await BackendService.client.from('messages').insert({
         'conversation_id': conversationId,
         'user_id': user.id,
         'role': 'user',
-        'content': text,
+        'content': displayText,
       }).select('id,created_at').single();
       final localIndex = _messages.indexWhere((m) => m.id == localUserId);
       if (localIndex >= 0) {
         _messages[localIndex] = ChatMessage(
           id: savedUser['id'].toString(),
           role: 'user',
-          content: text,
+          content: displayText,
           timestamp: DateTime.parse(savedUser['created_at'].toString()).toLocal(),
         );
       }
@@ -253,7 +313,7 @@ class _ChatScreenState extends State<ChatScreen> {
       final history = _messages
           .map((m) => <String, String>{'role': m.role, 'content': m.content})
           .toList();
-      final answer = await BackendService.sendChat(messages: history, assistantId: widget.supportMode ? null : _selectedAssistantId, userInstructions: _userInstructions, supportMode: widget.supportMode);
+      final answer = await BackendService.sendChat(messages: history, attachments: sendingAttachments, assistantId: widget.supportMode ? null : _selectedAssistantId, userInstructions: _userInstructions, supportMode: widget.supportMode);
       final saved = await BackendService.client.from('messages').insert({
         'conversation_id': conversationId,
         'user_id': user.id,
@@ -582,8 +642,22 @@ class _ChatScreenState extends State<ChatScreen> {
               top: false,
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
-                child: Row(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
+                    if (_attachments.isNotEmpty) SizedBox(height: 34, child: ListView(
+                      scrollDirection: Axis.horizontal,
+                      children: _attachments.map((a) => Padding(
+                        padding: const EdgeInsets.only(left: 6),
+                        child: Chip(label: Text(a['name'].toString(), overflow: TextOverflow.ellipsis), onDeleted: _sending ? null : () => setState(() => _attachments.remove(a))),
+                      )).toList(),
+                    )),
+                    Row(children: [
+                    IconButton(
+                      tooltip: 'افزودن فایل از کتابخانه',
+                      onPressed: _sending ? null : _chooseAttachments,
+                      icon: const Icon(Icons.attach_file_rounded),
+                    ),
                     Expanded(
                       child: TextField(
                         controller: _controller,
@@ -613,6 +687,7 @@ class _ChatScreenState extends State<ChatScreen> {
                         fixedSize: const Size(48, 48),
                       ),
                     ),
+                    ]),
                   ],
                 ),
               ),
