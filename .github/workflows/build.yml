@@ -79,6 +79,8 @@ jobs:
           printf '%s' "$KEYSTORE_BASE64" | base64 --decode > android/app/release-key.jks
           test -s android/app/release-key.jks
           keytool -list -keystore android/app/release-key.jks -storepass "$STORE_PASSWORD" >/dev/null
+      - name: Generate Gradle Wrapper 8.14.3
+        run: gradle -p android wrapper --gradle-version 8.14.3 --distribution-type bin
       - name: Build signed Release APK
         env:
           KEYSTORE_PATH: release-key.jks
