@@ -38,6 +38,7 @@ class _OwnerPanelScreenState extends State<OwnerPanelScreen> {
   bool _interstitialEnabled = false;
   bool _rewardedEnabled = false;
   List<Map<String, dynamic>> _assistants = [];
+  List<Map<String, dynamic>> _models = [];
   List<Map<String, dynamic>> _users = [];
   List<Map<String, dynamic>> _purchases = [];
   List<Map<String, dynamic>> _conversations = [];
@@ -141,6 +142,7 @@ class _OwnerPanelScreenState extends State<OwnerPanelScreen> {
       _rewardedEnabled = config['ad_rewarded_enabled'] == true;
       _announcement.text = config['announcement']?.toString() ?? '';
       _paymentEnabled = config['payment_enabled'] == true;
+      await _loadModels();
       await _loadAssistants();
       await _loadUsers();
       await _loadPurchases();
@@ -185,6 +187,116 @@ class _OwnerPanelScreenState extends State<OwnerPanelScreen> {
       _notify('اطلاعات کاربر به‌روزرسانی شد.');
     } catch (e) {
       _notify('تغییر حساب کاربر ناموفق بود: $e');
+    }
+  }
+
+  Future<void> _loadModels() async {
+    final rows = await BackendService.client
+        .from('ai_models')
+        .select('id,provider,model_id,display_name,description,is_active,sort_order')
+        .order('sort_order')
+        .order('display_name');
+    _models = rows.map((row) => Map<String, dynamic>.from(row)).toList();
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _editAiModel([Map<String, dynamic>? model]) async {
+    final id = TextEditingController(text: model?['model_id']?.toString() ?? '');
+    final name = TextEditingController(text: model?['display_name']?.toString() ?? '');
+    final description = TextEditingController(text: model?['description']?.toString() ?? '');
+    final result = await showDialog<Map<String, String>>(
+      context: context,
+      builder: (dialogContext) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: AlertDialog(
+          title: Text(model == null ? 'افزودن مدل هوش مصنوعی' : 'ویرایش مدل'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(controller: id, decoration: const InputDecoration(
+                  labelText: 'شناسه مدل OpenRouter',
+                  hintText: 'مثلاً openai/gpt-4.1-mini',
+                )),
+                TextField(controller: name, decoration: const InputDecoration(labelText: 'نام نمایشی')),
+                TextField(controller: description, maxLines: 2,
+                  decoration: const InputDecoration(labelText: 'توضیحات (اختیاری)')),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('لغو')),
+            ElevatedButton(
+              onPressed: () {
+                if (id.text.trim().isEmpty || name.text.trim().isEmpty) return;
+                Navigator.pop(dialogContext, {
+                  'model_id': id.text.trim(),
+                  'display_name': name.text.trim(),
+                  'description': description.text.trim(),
+                });
+              },
+              child: const Text('ذخیره'),
+            ),
+          ],
+        ),
+      ),
+    );
+    id.dispose();
+    name.dispose();
+    description.dispose();
+    if (result == null) return;
+    try {
+      if (model == null) {
+        await BackendService.client.from('ai_models').insert({
+          'provider': 'openrouter',
+          ...result,
+          'is_active': true,
+          'sort_order': _models.length,
+        });
+      } else {
+        await BackendService.client.from('ai_models').update(result).eq('id', model['id']);
+      }
+      await _loadModels();
+      _notify('مدل در دیتابیس ذخیره شد.');
+    } catch (e) {
+      _notify('ذخیره مدل ناموفق بود: $e');
+    }
+  }
+
+  Future<void> _toggleAiModel(Map<String, dynamic> model) async {
+    try {
+      await BackendService.client.from('ai_models')
+          .update({'is_active': !(model['is_active'] == true)})
+          .eq('id', model['id']);
+      await _loadModels();
+    } catch (e) {
+      _notify('تغییر وضعیت مدل ناموفق بود: $e');
+    }
+  }
+
+  Future<void> _deleteAiModel(Map<String, dynamic> model) async {
+    if (model['model_id'] == 'openrouter/free') {
+      _notify('مدل پیش‌فرض رایگان را حذف نکن؛ می‌توانی غیرفعالش کنی.');
+      return;
+    }
+    final yes = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('حذف مدل'),
+        content: Text('مدل «${model['display_name']}» حذف شود؟'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('لغو')),
+          TextButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('حذف')),
+        ],
+      ),
+    );
+    if (yes != true) return;
+    try {
+      await BackendService.client.from('ai_models').delete().eq('id', model['id']);
+      await _loadModels();
+      _notify('مدل حذف شد.');
+    } catch (e) {
+      _notify('حذف مدل ناموفق بود: $e');
     }
   }
 
@@ -406,6 +518,59 @@ class _OwnerPanelScreenState extends State<OwnerPanelScreen> {
                       _field('نام برنامه', _name),
                       _field('مدل هوش مصنوعی', _model),
                       _field('آدرس API', _baseUrl),
+                      const Divider(height: 28),
+                      Row(
+                        children: [
+                          const Expanded(child: Text('مدیریت مدل‌های هوش مصنوعی',
+                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold))),
+                          IconButton(
+                            tooltip: 'افزودن مدل',
+                            onPressed: () => _editAiModel(),
+                            icon: const Icon(Icons.add_circle_outline),
+                          ),
+                          IconButton(
+                            tooltip: 'بارگذاری دوباره مدل‌ها',
+                            onPressed: _loadModels,
+                            icon: const Icon(Icons.refresh),
+                          ),
+                        ],
+                      ),
+                      const Text('فهرست مرکزی مدل‌ها در دیتابیس ذخیره می‌شود؛ افزودن یا غیرفعال‌کردن مدل نیاز به انتشار APK ندارد.',
+                        style: TextStyle(color: Colors.white60)),
+                      if (_models.isEmpty)
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 12),
+                          child: Text('هنوز مدلی ثبت نشده است.'),
+                        ),
+                      ..._models.map((model) => Card(
+                        color: const Color(0xFF211A35),
+                        child: ListTile(
+                          leading: Icon(
+                            model['is_active'] == true ? Icons.check_circle : Icons.pause_circle,
+                            color: model['is_active'] == true ? Colors.greenAccent : Colors.white54,
+                          ),
+                          title: Text(model['display_name']?.toString() ?? model['model_id'].toString()),
+                          subtitle: Text('${model['model_id']} • ${model['is_active'] == true ? 'فعال' : 'غیرفعال'}'),
+                          trailing: PopupMenuButton<String>(
+                            onSelected: (value) {
+                              if (value == 'edit') _editAiModel(model);
+                              if (value == 'toggle') _toggleAiModel(model);
+                              if (value == 'delete') _deleteAiModel(model);
+                              if (value == 'default') {
+                                setState(() => _model.text = model['model_id'].toString());
+                              }
+                            },
+                            itemBuilder: (_) => [
+                              const PopupMenuItem(value: 'default', child: Text('انتخاب به‌عنوان مدل پیش‌فرض')),
+                              const PopupMenuItem(value: 'edit', child: Text('ویرایش')),
+                              PopupMenuItem(value: 'toggle',
+                                child: Text(model['is_active'] == true ? 'غیرفعال‌کردن' : 'فعال‌کردن')),
+                              const PopupMenuItem(value: 'delete', child: Text('حذف')),
+                            ],
+                          ),
+                        ),
+                      )),
+
                       _field('دستورالعمل اصلی هوش مصنوعی', _prompt, lines: 5),
                       _field('لینک کانال روبیکا', _rubika),
                       _field('لینک مایکت', _myket),
