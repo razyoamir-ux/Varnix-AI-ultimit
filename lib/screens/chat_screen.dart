@@ -277,7 +277,7 @@ class _ChatScreenState extends State<ChatScreen> {
     if (user == null) return;
 
     final sendingAttachments = List<Map<String, dynamic>>.from(_attachments);
-    final displayText = [text, if (sendingAttachments.isNotEmpty) '📎 ${sendingAttachments.map((a) => a['name']).join('، ')}'].where((v) => v.isNotEmpty).join('\\n');
+    final displayText = [text, if (sendingAttachments.isNotEmpty) '📎 ${sendingAttachments.map((a) => a['name']).join('، ')}'].where((v) => v.isNotEmpty).join('\n');
     setState(() {
       _sending = true;
       _controller.clear();
