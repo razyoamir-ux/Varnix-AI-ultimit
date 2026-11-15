@@ -10,6 +10,7 @@ on:
     branches:
       - main
       - master
+      - feat/owner-panel-database-management
 
 permissions:
   contents: read
