@@ -80,7 +80,7 @@ class _OwnerPanelScreenState extends State<OwnerPanelScreen> with SingleTickerPr
       actions:[TextButton(onPressed:()=>Navigator.pop(c),child:const Text('انصراف')),FilledButton(onPressed:()=>Navigator.pop(c,{'provider':provider,'label':label.text.trim(),'api_key':secret.text.trim()}),child:const Text('ثبت امن'))]
     )));
     if(result!=null){try{
-      if((result['label']??'').isEmpty||(result['api_key']??'').length<8)throw Exception('عنوان و کلید معتبر لازم است.');
+      if((result['label']??'').isEmpty||(result['api_key']??'').length<12)throw Exception('عنوان و کلید معتبر لازم است.');
       await adminCall({'action':'add',...result});await reload();toast('کلید در مخزن امن ثبت شد.');
     }catch(e){toast(err(e),true);}}
     label.dispose();secret.dispose();
@@ -92,7 +92,7 @@ class _OwnerPanelScreenState extends State<OwnerPanelScreen> with SingleTickerPr
       content:TextField(controller:secret,obscureText:true,decoration:const InputDecoration(labelText:'کلید جدید API')),
       actions:[TextButton(onPressed:()=>Navigator.pop(c),child:const Text('انصراف')),FilledButton(onPressed:()=>Navigator.pop(c,secret.text.trim()),child:const Text('تعویض'))]
     ));
-    if(value!=null){try{if(value.length<8)throw Exception('کلید معتبر نیست.');await adminCall({'action':'rotate','key_id':key['id'],'api_key':value});await reload();toast('کلید با موفقیت جایگزین شد.');}catch(e){toast(err(e),true);}}
+    if(value!=null){try{if(value.length<12)throw Exception('کلید معتبر نیست.');await adminCall({'action':'rotate','key_id':key['id'],'provider':key['provider'],'label':key['label'],'api_key':value});await reload();toast('کلید با موفقیت جایگزین شد.');}catch(e){toast(err(e),true);}}
     secret.dispose();
   }
   Future<void> toggleProviderKey(Map<String,dynamic> key,bool active) async {
