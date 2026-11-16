@@ -13,8 +13,6 @@ class ApiService {
         ? history.sublist(history.length - 20)
         : history;
     final messages = <Map<String, String>>[
-      if (systemInstruction != null && systemInstruction.trim().isNotEmpty)
-        {'role': 'system', 'content': systemInstruction.trim()},
       for (final message in recentHistory)
         if (message.role == 'user' || message.role == 'assistant')
           {'role': message.role, 'content': message.content},
@@ -24,7 +22,7 @@ class ApiService {
     try {
       final response = await Supabase.instance.client.functions.invoke(
         'chat',
-        body: {'messages': messages, if (model != null && model.isNotEmpty) 'model': model},
+        body: {'messages': messages, if (model != null && model.isNotEmpty) 'model': model, if (systemInstruction != null && systemInstruction.trim().isNotEmpty) 'system_instruction': systemInstruction.trim()},
       );
       final dynamic raw = response.data;
       final dynamic data = raw is String ? jsonDecode(raw) : raw;
