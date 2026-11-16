@@ -18,7 +18,7 @@ class AppSettings {
     this.rubikaChannelLink = '',
     this.paymentLink = '',
     this.myketLink = '',
-    this.paymentAmount = '۱۸۹٬۰۰۰ تومان',
+    this.paymentAmount = '۹۹٬۰۰۰ تومان',
     this.proDurationDays = 40,
   });
 
