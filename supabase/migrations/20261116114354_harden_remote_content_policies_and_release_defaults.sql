@@ -26,8 +26,8 @@ begin
 end $$;
 
 update public.app_config set
-  pro_price='136000',
-  pro_base_price=120000,
+  pro_price='189000',
+  pro_base_price=189000,
   pro_duration_days=30,
   payment_provider='myket',
   payment_enabled=false,
@@ -41,5 +41,5 @@ update public.app_config set
   updated_at=now()
 where id=true;
 
-update public.subscription_plans set price_label='۱۳۶٬۰۰۰ تومان',duration_days=30,is_active=true,updated_at=now() where plan_code='pro';
+update public.subscription_plans set price_label='۱۸۹٬۰۰۰ تومان',duration_days=30,is_active=true,updated_at=now() where plan_code='pro';
 update public.subscription_plans set price_label='۰ تومان',duration_days=30,is_active=true,updated_at=now() where plan_code='free';
