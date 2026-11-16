@@ -58,6 +58,18 @@ class _AddonsTab extends StatelessWidget{
  const _AddonsTab();
  Future<List<Map<String,dynamic>>> _load()async{final rows=await Supabase.instance.client.from('addons').select('id,slug,name,description,icon,capability_type,config,requires_pro,min_app_version').eq('is_enabled',true).order('sort_order');return List<Map<String,dynamic>>.from(rows);}
  Future<void> _activate(BuildContext context,Map<String,dynamic> item)async{
+  if(item['requires_pro']==true){
+   try{
+    final user=Supabase.instance.client.auth.currentUser;
+    if(user==null){if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('برای استفاده از این افزونه وارد حساب شو.')));return;}
+    final profile=await Supabase.instance.client.from('profiles').select('role,plan_code,plan_expires_at').eq('id',user.id).maybeSingle();
+    final role=(profile?['role']??'').toString().toLowerCase();
+    final plan=(profile?['plan_code']??'free').toString().toLowerCase();
+    final expiry=profile?['plan_expires_at'];
+    final pro=role=='admin'||plan=='owner'||(plan=='pro'&&(expiry==null||DateTime.tryParse(expiry.toString())?.isAfter(DateTime.now())==true));
+    if(!pro){if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('این افزونه مخصوص اشتراک حرفه‌ای است.')));return;}
+   }catch(_){if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('وضعیت اشتراک بررسی نشد؛ دوباره تلاش کن.')));return;}
+  }
   final type=item['capability_type']?.toString()??'';final config=item['config'] is Map?Map<String,dynamic>.from(item['config'] as Map):<String,dynamic>{};
   if(type=='external_link'){final url=config['url']?.toString()??'';if(url.startsWith('https://')){await _open(url);}else if(context.mounted){ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('پیوند امن برای این افزونه ثبت نشده است.')));}return;}
   final body=config['body']?.toString()??config['content']?.toString()??'';
