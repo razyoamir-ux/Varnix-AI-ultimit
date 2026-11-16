@@ -23,7 +23,7 @@ class _TutorialsTab extends StatelessWidget{
   if(s.hasError)return const _OnlineError(message:'آموزش‌ها دریافت نشدند. دیتابیس باید به‌روزرسانی شده باشد.');
   final rows=s.data??[];
   if(rows.isEmpty)return const _EmptyOnline(message:'هنوز آموزشی منتشر نشده است. آموزش‌ها پس از انتشار از پنل مالک اینجا نمایش داده می‌شوند.');
-  return RefreshIndicator(onRefresh:()=>_load(),child:ListView(padding:const EdgeInsets.all(14),children:rows.map((r)=>Card(color:_toolsPanel,child:ExpansionTile(iconColor:_toolsAccent,collapsedIconColor:_toolsAccent,
+  return RefreshIndicator(onRefresh:() async { await _load(); },child:ListView(padding:const EdgeInsets.all(14),children:rows.map((r)=>Card(color:_toolsPanel,child:ExpansionTile(iconColor:_toolsAccent,collapsedIconColor:_toolsAccent,
    title:Text(r['title']?.toString()??'آموزش',style:const TextStyle(color:Colors.white,fontWeight:FontWeight.bold)),subtitle:Text(r['category']?.toString()??'عمومی',style:const TextStyle(color:Colors.white54)),
    children:[Padding(padding:const EdgeInsets.fromLTRB(16,0,16,12),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
     SelectableText(r['body']?.toString()??'',style:const TextStyle(color:Colors.white,height:1.8)),
@@ -68,7 +68,7 @@ class _AddonsTab extends StatelessWidget{
   if(s.connectionState==ConnectionState.waiting)return const Center(child:CircularProgressIndicator());
   if(s.hasError)return const _OnlineError(message:'افزونه‌ها بارگذاری نشدند. دیتابیس باید به‌روزرسانی شده باشد.');
   final rows=s.data??[];if(rows.isEmpty)return const _EmptyOnline(message:'هنوز افزونه‌ای از پنل مالک فعال و منتشر نشده است.');
-  return RefreshIndicator(onRefresh:()=>_load(),child:ListView(padding:const EdgeInsets.all(14),children:rows.map((item){
+  return RefreshIndicator(onRefresh:() async { await _load(); },child:ListView(padding:const EdgeInsets.all(14),children:rows.map((item){
    final pro=item['requires_pro']==true;final type=item['capability_type']?.toString()??'';
    final kind=type=='external_link'?'پیوند خارجی امن':type=='remote_content'?'محتوای آنلاین':'قابلیت تنظیمی';
    return Card(color:_toolsPanel,child:ListTile(leading:const CircleAvatar(backgroundColor:Color(0x338B5CF6),child:Icon(Icons.extension,color:_toolsAccent)),
