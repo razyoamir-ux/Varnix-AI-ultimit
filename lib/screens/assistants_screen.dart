@@ -9,7 +9,7 @@ class AssistantsScreen extends StatefulWidget {
   @override State<AssistantsScreen> createState()=>_AssistantsScreenState();
 }
 class _AssistantsScreenState extends State<AssistantsScreen> {
-  static const _key='varnix_personal_assistants_v1',_panel=Color(0xFF211936),_purple=Color(0xFFA78BFA);
+  static const _key='varnix_personal_assistants_v1',_panel=Color(0xFF211936);
   List<Map<String,dynamic>> _public=[],_personal=[];
   bool _loading=true; String? _error;
   @override void initState(){super.initState();_load();}
