@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'varnix_info_screen.dart';
 import 'welcome_screen.dart';
 
 class AuthScreen extends StatefulWidget {
@@ -13,12 +15,14 @@ class _AuthScreenState extends State<AuthScreen> {
   final _email = TextEditingController();
   final _password = TextEditingController();
   final _inviteCode = TextEditingController();
+  bool _acceptedTerms = false;
   bool _register = false;
   bool _busy = false;
   bool _hidePassword = true;
   String _message = '';
 
   Future<void> _submit() async {
+    if (!_acceptedTerms) { setState(() => _message = 'برای ادامه باید شرایط و قوانین را بپذیری.'); return; }
     final email = _email.text.trim();
     final password = _password.text;
     if (email.isEmpty || !email.contains('@')) {
@@ -57,6 +61,9 @@ class _AuthScreenState extends State<AuthScreen> {
           password: password,
         );
       }
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('varnix_terms_accepted_version', '1.0');
+      await prefs.setString('varnix_terms_accepted_at', DateTime.now().toUtc().toIso8601String());
       if (!mounted) return;
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(builder: (_) => const WelcomeScreen()),
@@ -139,6 +146,7 @@ class _AuthScreenState extends State<AuthScreen> {
                       ),
                     ),
                   ],
+                  CheckboxListTile(value: _acceptedTerms, activeColor: const Color(0xFF8B5CF6), controlAffinity: ListTileControlAffinity.leading, onChanged: _busy ? null : (v) => setState(() => _acceptedTerms = v == true), title: const Text('تمام شرایط و قوانین را می‌پذیرم.', style: TextStyle(color: Colors.white, fontSize: 13)), subtitle: TextButton(onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const VarnixInfoScreen(section: 'terms'))), child: const Text('مطالعه شرایط و قوانین'))),
                   if (_message.isNotEmpty)
                     Padding(
                       padding: const EdgeInsets.only(top: 14),

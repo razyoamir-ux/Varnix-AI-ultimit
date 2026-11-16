@@ -33,42 +33,22 @@ class _CodeLabScreenState extends State<CodeLabScreen> {
     final command = _terminalCommand.text.trim();
     if (command.isEmpty || _installing) return;
     final match = RegExp(r'^pip\s+install\s+([A-Za-z0-9_.-]+)$', caseSensitive: false).firstMatch(command);
-
     if (_language == 'python' && match != null) {
-      final package = match.group(1)!.toLowerCase();
-      setState(() { _installing = true; _output = 'درخواست نصب $package ارسال شد...'; });
-      try {
-        final response = await Supabase.instance.client.functions.invoke(
-          'code-runner',
-          body: {'action': 'install', 'language': 'python', 'package': package},
-        );
-        final data = response.data;
-        if (data is Map && data['error'] != null) {
-          setState(() => _output = data['error'].toString());
-        } else {
-          setState(() => _output = data is Map
-              ? (data['message'] ?? data.toString()).toString()
-              : data.toString());
-        }
-      } on FunctionException catch (e) {
-        setState(() => _output = 'خطای نصب: ${e.details ?? e.reasonPhrase ?? e.toString()}');
-      } catch (e) {
-        setState(() => _output = 'خطا در ارتباط: $e');
-      } finally {
-        if (mounted) setState(() => _installing = false);
-      }
+      await Clipboard.setData(ClipboardData(text: command));
+      if (!mounted) return;
+      setState(() => _output = 'دستور نصب کپی شد. Runner ابری وارنیکس موقتی است و نصب بسته را بین اجراها نگه نمی‌دارد؛ دستور را در محیط Python خودت اجرا کن.');
       return;
     }
-
     if (_language == 'java' && command.startsWith('mvn dependency:get -Dartifact=')) {
       await Clipboard.setData(ClipboardData(text: command));
-      setState(() => _output = 'دستور Maven کپی شد. اجرای واقعی نصب Maven هنوز به Runner اختصاصی Maven نیاز دارد.');
+      if (!mounted) return;
+      setState(() => _output = 'دستور Maven کپی شد. نصب مستقیم وابستگی‌ها در Runner فعلی فعال نیست.');
       return;
     }
-
+    if (!mounted) return;
     setState(() => _output = _language == 'python'
-        ? 'دستور پشتیبانی‌شده: pip install package-name'
-        : 'برای Java فعلاً دستور Maven را از صفحه کتابخانه‌ها کپی کن؛ نصب مستقیم Maven هنوز فعال نیست.');
+        ? 'دستور پشتیبانی‌شده برای کپی: pip install package-name'
+        : 'دستور Maven را از صفحه کتابخانه‌ها کپی کن؛ نصب مستقیم Maven هنوز فعال نیست.');
   }
 
   Future<void> _openSavedProject() async {

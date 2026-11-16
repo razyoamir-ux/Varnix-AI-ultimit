@@ -9,12 +9,14 @@ on:
       - feat/cloud-sync-and-owner-api-keys
       - feat/multipage-navigation-referrals
       - feat/permission-onboarding-file-access
+      - feat/varnix-content-terms-updates
   pull_request:
     branches:
       - main
       - master
       - feat/cloud-sync-and-owner-api-keys
       - feat/multipage-navigation-referrals
+      - feat/permission-onboarding-file-access
 
 permissions:
   contents: read
@@ -52,6 +54,13 @@ jobs:
         run: gradle -p android wrapper --gradle-version 8.14.3 --distribution-type bin
       - name: Build Debug APK for Android verification
         run: flutter build apk --debug
+      - name: Upload Debug APK for device testing
+        uses: actions/upload-artifact@v4
+        with:
+          name: varnix-ai-debug-${{ github.run_number }}
+          path: build/app/outputs/flutter-apk/app-debug.apk
+          retention-days: 30
+          if-no-files-found: error
 
   release:
     if: github.event_name != 'pull_request'

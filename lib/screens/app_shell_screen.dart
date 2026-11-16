@@ -13,6 +13,11 @@ import 'developer_utilities_screen.dart';
 import 'announcements_screen.dart';
 import 'appearance_screen.dart';
 import 'html_playground_screen.dart';
+import 'varnix_info_screen.dart';
+import 'assistants_screen.dart';
+import 'documents_screen.dart';
+import 'online_tools_screen.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class AppShellScreen extends StatefulWidget {
   const AppShellScreen({super.key});
@@ -22,6 +27,10 @@ class AppShellScreen extends StatefulWidget {
 
 class _AppShellScreenState extends State<AppShellScreen> {
   int _index = 0;
+  static const _currentVersion = '2.0.1';
+  @override void initState() { super.initState(); WidgetsBinding.instance.addPostFrameCallback((_) => _checkRelease()); }
+  Future<void> _checkRelease() async { try { final rows = await Supabase.instance.client.from('app_releases').select().eq('is_published', true).order('published_at', ascending: false).limit(10); for (final item in rows) { final r = Map<String, dynamic>.from(item); if (_compareVersions(r['version'].toString(), _currentVersion) <= 0) continue; if (!mounted) return; final url = r['download_url']?.toString() ?? ''; await showDialog<void>(context: context, barrierDismissible: r['is_mandatory'] != true, builder: (ctx) => AlertDialog(title: const Text('نسخه جدید در دسترس است!'), content: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [Text('Varnix AI ${r['version']}'), const SizedBox(height: 8), Text(r['title']?.toString() ?? ''), const SizedBox(height: 8), Text(r['notes']?.toString() ?? ''), if (r['is_mandatory'] == true) const Text('این به‌روزرسانی ضروری است.', style: TextStyle(color: Colors.deepOrange))])), actions: [if (r['is_mandatory'] != true) TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('بعداً')), FilledButton(onPressed: url.isEmpty ? null : () async { final uri = Uri.tryParse(url); if (uri != null && uri.scheme == 'https') await launchUrl(uri, mode: LaunchMode.externalApplication); }, child: const Text('دریافت نسخه جدید'))])); break; } } catch (_) {} }
+  int _compareVersions(String a, String b) { final aa=a.split('.').map((x)=>int.tryParse(x)??0).toList(), bb=b.split('.').map((x)=>int.tryParse(x)??0).toList(); for(var i=0;i<3;i++){final x=i<aa.length?aa[i]:0,y=i<bb.length?bb[i]:0;if(x!=y)return x.compareTo(y);}return 0;}
   static const _purple = Color(0xFF8B5CF6);
   void _go(int index) {
     setState(() => _index = index);
@@ -123,22 +132,28 @@ class _ToolsPage extends StatelessWidget {
   const _ToolsPage({required this.onOpen});
   @override
   Widget build(BuildContext context) => _PageFrame(title: 'ابزارهای هوشمند', subtitle: 'بخش‌های مختلف وارنیکس', child: Column(children: [
+    _ToolRow(icon: Icons.info_outline, title: 'درباره وارنیکس', subtitle: 'معرفی برنامه و راه‌های ارتباطی', status: 'اطلاعات', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const VarnixInfoScreen(section: 'about')))),
+    _ToolRow(icon: Icons.apps, title: 'سایر برنامه‌های ما', subtitle: 'برنامه‌های منتشرشده و آینده', status: 'برنامه‌ها', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const VarnixInfoScreen(section: 'apps')))),
+    _ToolRow(icon: Icons.system_update, title: 'به‌روزرسانی‌ها', subtitle: 'نسخه‌ها و تغییرات جدید', status: 'نسخه‌ها', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const VarnixInfoScreen(section: 'updates')))),
+    _ToolRow(icon: Icons.gavel, title: 'شرایط و قوانین', subtitle: 'مطالعه قوانین استفاده', status: 'قوانین', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const VarnixInfoScreen(section: 'terms')))),
+    _ToolRow(icon: Icons.privacy_tip_outlined, title: 'حریم خصوصی', subtitle: 'اطلاعات و حریم خصوصی کاربران', status: 'حریم خصوصی', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const VarnixInfoScreen(section: 'privacy')))),
     _ToolRow(icon: Icons.notifications_active_outlined, title: 'اعلان‌های وارنیکس', subtitle: 'مشاهده اطلاعیه‌های رسمی داخل برنامه', status: 'اعلان', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AnnouncementsScreen()))),
     _ToolRow(icon: Icons.card_giftcard, title: 'دعوت دوستان', subtitle: 'کد دعوت اختصاصی و شمارش دعوت‌ها', status: 'رایگان', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ReferralPage()))),
     _ToolRow(icon: Icons.workspace_premium_outlined, title: 'پلن‌ها و اشتراک', subtitle: 'مشاهده پلن فعلی و امکانات حرفه‌ای', status: 'پلن‌ها', onTap: () => onOpen(2)),
-    _ToolRow(icon: Icons.smart_toy_outlined, title: 'دستیارهای هوشمند', subtitle: 'انتخاب و ساخت دستیارهای اختصاصی', status: 'در حال توسعه'),
+    _ToolRow(icon: Icons.smart_toy_outlined, title: 'دستیارهای هوشمند', subtitle: 'انتخاب دستیارهای آماده و ساخت دستیار شخصی', status: 'فعال', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AssistantsScreen()))),
+    _ToolRow(icon: Icons.school_outlined, title: 'آموزش‌ها و امکانات آنلاین', subtitle: 'آموزش‌های برنامه، قالب‌های آماده و افزونه‌های قابل مدیریت از پنل مالک', status: 'آنلاین', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const OnlineToolsScreen()))),
     _ToolRow(icon: Icons.code, title: 'آزمایشگاه کدنویسی', subtitle: 'ویرایش، اجرا و مشاهده خروجی Python و Java', status: 'جدید', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CodeLabScreen()))),
     _ToolRow(icon: Icons.web, title: 'آزمایشگاه طراحی وب', subtitle: 'کدنویسی HTML، CSS و JavaScript با پیش‌نمایش داخل برنامه', status: 'جدید', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const HtmlPlaygroundScreen()))),
-    _ToolRow(icon: Icons.library_books, title: 'مرور کتابخانه‌ها', subtitle: 'جست‌وجو و نصب بسته‌های Python و کتابخانه‌های Java', status: 'جدید', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PackageLibraryScreen()))),
+    _ToolRow(icon: Icons.library_books, title: 'مرور کتابخانه‌ها', subtitle: 'جست‌وجوی بسته‌ها و دریافت دستور نصب Python و Java', status: 'جدید', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PackageLibraryScreen()))),
     _ToolRow(icon: Icons.folder_special, title: 'پروژه‌های من', subtitle: 'ذخیره، مشاهده، کپی و مدیریت کدهای شخصی', status: 'جدید', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CodeProjectsScreen()))),
     _ToolRow(icon: Icons.auto_fix_high, title: 'ابزارهای رایگان', subtitle: 'قالب‌های آماده، بررسی متن و یادداشت سریع', status: 'رایگان', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const FreeToolsScreen()))),
     _ToolRow(icon: Icons.data_object, title: 'ابزار JSON', subtitle: 'اعتبارسنجی، مرتب‌سازی و فشرده‌سازی JSON', status: 'آفلاین', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const JsonToolScreen()))),
     _ToolRow(icon: Icons.swap_horiz, title: 'تبدیل‌گر Base64', subtitle: 'رمزگذاری و بازکردن متن با پشتیبانی فارسی', status: 'آفلاین', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const Base64ToolScreen()))),
-    _ToolRow(icon: Icons.image_outlined, title: 'تولید تصویر', subtitle: 'ساخت تصویر با هوش مصنوعی', status: 'محدود'),
-    _ToolRow(icon: Icons.video_library_outlined, title: 'ساخت ویدئو', subtitle: 'ابزار ویدئویی و ارسال فایل', status: 'به‌زودی'),
-    _ToolRow(icon: Icons.folder_open, title: 'فایل‌ها و اسناد', subtitle: 'مدیریت فایل‌های ارسالی', status: 'در حال توسعه'),
-    _ToolRow(icon: Icons.history, title: 'تاریخچه گفتگوها', subtitle: 'گفتگوهای ذخیره‌شده حساب', status: 'در گفتگو'),
-    _ToolRow(icon: Icons.workspace_premium_outlined, title: 'اشتراک حرفه‌ای', subtitle: 'امکانات و شرایط نسخه حرفه‌ای', status: 'مشاهده از حساب'),
+    _ToolRow(icon: Icons.image_outlined, title: 'دستیار طراحی تصویر', subtitle: 'ساخت و اصلاح پرامپت تصویر با کمک هوش مصنوعی؛ تولید مستقیم تصویر هنوز به سرویس جداگانه نیاز دارد', status: 'محدود', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ChatScreen(initialPrompt: 'می‌خواهم یک تصویر بسازم. با پرسیدن جزئیات لازم، یک پرامپت دقیق و حرفه‌ای برای ابزار تولید تصویر به من بده.')))),
+    _ToolRow(icon: Icons.video_library_outlined, title: 'ساخت ویدئو', subtitle: 'اتصال سرویس تولید ویدئو هنوز انجام نشده است', status: 'به‌زودی', onTap: () => showDialog<void>(context: context, builder: (ctx) => AlertDialog(title: const Text('ساخت ویدئو'), content: const Text('این قابلیت تا زمان اتصال سرویس تولید ویدئو و تنظیم امن کلیدهای آن فعال نمی‌شود. فعلاً هیچ هزینه‌ای بابت تولید ویدئو از شما دریافت نمی‌شود.'), actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('متوجه شدم'))]))),
+    _ToolRow(icon: Icons.folder_open, title: 'فایل‌ها و اسناد', subtitle: 'ساخت، جست‌وجو، ویرایش و نگهداری یادداشت‌ها و متن‌ها روی دستگاه', status: 'فعال', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const DocumentsScreen()))),
+    _ToolRow(icon: Icons.history, title: 'تاریخچه گفتگوها', subtitle: 'بازگشت به گفتگوی ذخیره‌شده', status: 'فعال', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ChatScreen()))),
+    _ToolRow(icon: Icons.workspace_premium_outlined, title: 'اشتراک حرفه‌ای', subtitle: 'مشاهده پلن و امکانات حرفه‌ای', status: 'مشاهده', onTap: () => onOpen(2)),
     const SizedBox(height: 12),
     OutlinedButton.icon(onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ChatScreen())), icon: const Icon(Icons.chat), label: const Text('رفتن به گفتگوی هوشمند')),
   ]));
