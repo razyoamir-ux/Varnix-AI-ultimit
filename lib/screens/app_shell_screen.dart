@@ -10,6 +10,7 @@ import 'free_tools_screen.dart';
 import 'package_library_screen.dart';
 import 'code_projects_screen.dart';
 import 'developer_utilities_screen.dart';
+import 'announcements_screen.dart';
 
 class AppShellScreen extends StatefulWidget {
   const AppShellScreen({super.key});
@@ -87,6 +88,7 @@ class _HomePage extends StatelessWidget {
         crossAxisCount: 2, shrinkWrap: true, physics: const NeverScrollableScrollPhysics(),
         crossAxisSpacing: 12, mainAxisSpacing: 12, childAspectRatio: 1.55,
         children: [
+          _QuickTile(icon: Icons.notifications_active_outlined, title: 'اعلان‌ها', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AnnouncementsScreen()))),
           _QuickTile(icon: Icons.chat, title: 'گفتگوی هوشمند', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ChatScreen()))),
           _QuickTile(icon: Icons.auto_awesome, title: 'ابزارهای هوشمند', onTap: () => onOpen(1)),
           _QuickTile(icon: Icons.workspace_premium, title: 'پلن‌ها و اشتراک', onTap: () => onOpen(2)),
@@ -119,6 +121,7 @@ class _ToolsPage extends StatelessWidget {
   const _ToolsPage({required this.onOpen});
   @override
   Widget build(BuildContext context) => _PageFrame(title: 'ابزارهای هوشمند', subtitle: 'بخش‌های مختلف وارنیکس', child: Column(children: [
+    _ToolRow(icon: Icons.notifications_active_outlined, title: 'اعلان‌های وارنیکس', subtitle: 'مشاهده اطلاعیه‌های رسمی داخل برنامه', status: 'اعلان', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AnnouncementsScreen()))),
     _ToolRow(icon: Icons.card_giftcard, title: 'دعوت دوستان', subtitle: 'کد دعوت اختصاصی و شمارش دعوت‌ها', status: 'رایگان', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ReferralPage()))),
     _ToolRow(icon: Icons.workspace_premium_outlined, title: 'پلن‌ها و اشتراک', subtitle: 'مشاهده پلن فعلی و امکانات حرفه‌ای', status: 'پلن‌ها', onTap: () => onOpen(2)),
     _ToolRow(icon: Icons.smart_toy_outlined, title: 'دستیارهای هوشمند', subtitle: 'انتخاب و ساخت دستیارهای اختصاصی', status: 'در حال توسعه'),
