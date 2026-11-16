@@ -12,6 +12,7 @@ class AuthScreen extends StatefulWidget {
 class _AuthScreenState extends State<AuthScreen> {
   final _email = TextEditingController();
   final _password = TextEditingController();
+  final _inviteCode = TextEditingController();
   bool _register = false;
   bool _busy = false;
   bool _hidePassword = true;
@@ -35,6 +36,7 @@ class _AuthScreenState extends State<AuthScreen> {
         final result = await Supabase.instance.client.auth.signUp(
           email: email,
           password: password,
+          data: _inviteCode.text.trim().isEmpty ? null : {'referral_code': _inviteCode.text.trim().toUpperCase()},
           emailRedirectTo: 'com.varnix.ai.ultimateplus://login-callback/',
         );
         if (!mounted) return;
@@ -73,6 +75,7 @@ class _AuthScreenState extends State<AuthScreen> {
   void dispose() {
     _email.dispose();
     _password.dispose();
+    _inviteCode.dispose();
     super.dispose();
   }
 
@@ -124,6 +127,18 @@ class _AuthScreenState extends State<AuthScreen> {
                       ),
                     ),
                   ),
+                  if (_register) ...[
+                    const SizedBox(height: 14),
+                    TextField(
+                      controller: _inviteCode,
+                      textCapitalization: TextCapitalization.characters,
+                      decoration: const InputDecoration(
+                        labelText: 'کد دعوت (اختیاری)',
+                        prefixIcon: Icon(Icons.card_giftcard),
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                  ],
                   if (_message.isNotEmpty)
                     Padding(
                       padding: const EdgeInsets.only(top: 14),

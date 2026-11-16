@@ -7,10 +7,12 @@ on:
       - main
       - master
       - feat/cloud-sync-and-owner-api-keys
+      - feat/multipage-navigation-referrals
   pull_request:
     branches:
       - main
       - master
+      - feat/cloud-sync-and-owner-api-keys
 
 permissions:
   contents: read
