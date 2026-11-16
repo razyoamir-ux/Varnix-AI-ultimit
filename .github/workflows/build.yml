@@ -8,11 +8,13 @@ on:
       - master
       - feat/cloud-sync-and-owner-api-keys
       - feat/multipage-navigation-referrals
+      - feat/permission-onboarding-file-access
   pull_request:
     branches:
       - main
       - master
       - feat/cloud-sync-and-owner-api-keys
+      - feat/multipage-navigation-referrals
 
 permissions:
   contents: read
