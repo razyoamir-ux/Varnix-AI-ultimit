@@ -13,6 +13,8 @@ import 'developer_utilities_screen.dart';
 import 'announcements_screen.dart';
 import 'appearance_screen.dart';
 import 'html_playground_screen.dart';
+import 'varnix_info_screen.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class AppShellScreen extends StatefulWidget {
   const AppShellScreen({super.key});
@@ -22,6 +24,10 @@ class AppShellScreen extends StatefulWidget {
 
 class _AppShellScreenState extends State<AppShellScreen> {
   int _index = 0;
+  static const _currentVersion = '2.0.1';
+  @override void initState() { super.initState(); WidgetsBinding.instance.addPostFrameCallback((_) => _checkRelease()); }
+  Future<void> _checkRelease() async { try { final rows = await Supabase.instance.client.from('app_releases').select().eq('is_published', true).order('published_at', ascending: false).limit(10); for (final item in rows) { final r = Map<String, dynamic>.from(item); if (_compareVersions(r['version'].toString(), _currentVersion) <= 0) continue; if (!mounted) return; final url = r['download_url']?.toString() ?? ''; await showDialog<void>(context: context, barrierDismissible: r['is_mandatory'] != true, builder: (ctx) => AlertDialog(title: const Text('نسخه جدید در دسترس است!'), content: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [Text('Varnix AI ${r['version']}'), const SizedBox(height: 8), Text(r['title']?.toString() ?? ''), const SizedBox(height: 8), Text(r['notes']?.toString() ?? ''), if (r['is_mandatory'] == true) const Text('این به‌روزرسانی ضروری است.', style: TextStyle(color: Colors.deepOrange))])), actions: [if (r['is_mandatory'] != true) TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('بعداً')), FilledButton(onPressed: url.isEmpty ? null : () async { final uri = Uri.tryParse(url); if (uri != null && uri.scheme == 'https') await launchUrl(uri, mode: LaunchMode.externalApplication); }, child: const Text('دریافت نسخه جدید'))])); break; } } catch (_) {} }
+  int _compareVersions(String a, String b) { final aa=a.split('.').map((x)=>int.tryParse(x)??0).toList(), bb=b.split('.').map((x)=>int.tryParse(x)??0).toList(); for(var i=0;i<3;i++){final x=i<aa.length?aa[i]:0,y=i<bb.length?bb[i]:0;if(x!=y)return x.compareTo(y);}return 0;}
   static const _purple = Color(0xFF8B5CF6);
   void _go(int index) {
     setState(() => _index = index);
@@ -123,6 +129,11 @@ class _ToolsPage extends StatelessWidget {
   const _ToolsPage({required this.onOpen});
   @override
   Widget build(BuildContext context) => _PageFrame(title: 'ابزارهای هوشمند', subtitle: 'بخش‌های مختلف وارنیکس', child: Column(children: [
+    _ToolRow(icon: Icons.info_outline, title: 'درباره وارنیکس', subtitle: 'معرفی برنامه و راه‌های ارتباطی', status: 'اطلاعات', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const VarnixInfoScreen(section: 'about')))),
+    _ToolRow(icon: Icons.apps, title: 'سایر برنامه‌های ما', subtitle: 'برنامه‌های منتشرشده و آینده', status: 'برنامه‌ها', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const VarnixInfoScreen(section: 'apps')))),
+    _ToolRow(icon: Icons.system_update, title: 'به‌روزرسانی‌ها', subtitle: 'نسخه‌ها و تغییرات جدید', status: 'نسخه‌ها', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const VarnixInfoScreen(section: 'updates')))),
+    _ToolRow(icon: Icons.gavel, title: 'شرایط و قوانین', subtitle: 'مطالعه قوانین استفاده', status: 'قوانین', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const VarnixInfoScreen(section: 'terms')))),
+    _ToolRow(icon: Icons.privacy_tip_outlined, title: 'حریم خصوصی', subtitle: 'اطلاعات و حریم خصوصی کاربران', status: 'حریم خصوصی', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const VarnixInfoScreen(section: 'privacy')))),
     _ToolRow(icon: Icons.notifications_active_outlined, title: 'اعلان‌های وارنیکس', subtitle: 'مشاهده اطلاعیه‌های رسمی داخل برنامه', status: 'اعلان', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AnnouncementsScreen()))),
     _ToolRow(icon: Icons.card_giftcard, title: 'دعوت دوستان', subtitle: 'کد دعوت اختصاصی و شمارش دعوت‌ها', status: 'رایگان', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ReferralPage()))),
     _ToolRow(icon: Icons.workspace_premium_outlined, title: 'پلن‌ها و اشتراک', subtitle: 'مشاهده پلن فعلی و امکانات حرفه‌ای', status: 'پلن‌ها', onTap: () => onOpen(2)),
