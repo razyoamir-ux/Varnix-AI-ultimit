@@ -7,6 +7,8 @@ class ApiService {
     required List<ChatMessage> history,
     required String userMessage,
     String? model,
+    String? providerId,
+    String? providerApiKey,
   }) async {
     final recentHistory = history.length > 20
         ? history.sublist(history.length - 20)
@@ -21,7 +23,12 @@ class ApiService {
     try {
       final response = await Supabase.instance.client.functions.invoke(
         'chat',
-        body: {'messages': messages, if (model != null && model.isNotEmpty) 'model': model},
+        body: {
+          'messages': messages,
+          if (model != null && model.isNotEmpty) 'model': model,
+          if (providerId != null && providerId.isNotEmpty) 'provider_id': providerId,
+          if (providerApiKey != null && providerApiKey.isNotEmpty) 'provider_api_key': providerApiKey,
+        },
       );
       final dynamic raw = response.data;
       final dynamic data = raw is String ? jsonDecode(raw) : raw;
