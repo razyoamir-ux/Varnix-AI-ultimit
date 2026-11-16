@@ -17,7 +17,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 class ChatScreen extends StatefulWidget {
   final String? assistantInstruction;
   final String? initialPrompt;
-  const ChatScreen({super.key, this.assistantInstruction, this.initialPrompt});
+  final String? conversationId;
+  const ChatScreen({super.key, this.assistantInstruction, this.initialPrompt, this.conversationId});
 
   @override
   State<ChatScreen> createState() => _ChatScreenState();
@@ -36,7 +37,6 @@ class _ChatScreenState extends State<ChatScreen> {
   bool _isInitialized = false;
   bool _isPro = false;
   bool _isAdmin = false;
-  bool _assistantInstructionUsed = false;
   String _selectedModel = 'openrouter/free';
   List<Map<String, dynamic>> _availableModels = [];
 
@@ -50,12 +50,15 @@ class _ChatScreenState extends State<ChatScreen> {
   Future<void> _loadData() async {
     final settings = await _storage.loadSettings();
     final chatUserId = Supabase.instance.client.auth.currentUser?.id;
-    var history = await _storage.loadChatHistory(userId: chatUserId);
-    try {
-      history = await _cloudChat.loadOrSyncLocal(history);
-      await _storage.saveChatHistory(history, userId: chatUserId);
-    } catch (_) {
-      // Keep the local history available if cloud sync is temporarily offline.
+    var history = await _storage.loadChatHistory(userId: chatUserId, conversationId: widget.conversationId);
+    if (widget.conversationId == null) {
+      try {
+        history = await _cloudChat.loadOrSyncLocal(history);
+        await _storage.saveChatHistory(history, userId: chatUserId);
+      }
+      catch (_) {
+        // Keep the local history available if cloud sync is temporarily offline.
+      }
     }
     final remoteSettings = await BackendService.loadRemoteSettings(settings);
     var isPro = false;
@@ -115,10 +118,7 @@ class _ChatScreenState extends State<ChatScreen> {
     final text = _controller.text.trim();
     if (text.isEmpty || _isLoading) return;
 
-    final instruction = widget.assistantInstruction;
-    final systemInstruction = instruction != null && instruction.trim().isNotEmpty && !_assistantInstructionUsed
-        ? instruction
-        : null;
+    final systemInstruction = widget.assistantInstruction;
     final userMsg = ChatMessage(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       role: 'user',
@@ -132,8 +132,8 @@ class _ChatScreenState extends State<ChatScreen> {
       _controller.clear();
     });
     _scrollToBottom();
-    await _storage.saveChatHistory(_messages, userId: Supabase.instance.client.auth.currentUser?.id);
-    try { await _cloudChat.syncMessage(userMsg); } catch (_) {}
+    await _storage.saveChatHistory(_messages, userId: Supabase.instance.client.auth.currentUser?.id, conversationId: widget.conversationId);
+    if (widget.conversationId == null) { try { await _cloudChat.syncMessage(userMsg); } catch (_) {} }
 
     try {
       final reply = await _api.sendMessage(
@@ -152,11 +152,10 @@ class _ChatScreenState extends State<ChatScreen> {
 
       setState(() {
         _messages.add(aiMsg);
-        _assistantInstructionUsed = true;
         _isLoading = false;
       });
       await _storage.saveChatHistory(_messages, userId: Supabase.instance.client.auth.currentUser?.id);
-      try { await _cloudChat.syncMessage(aiMsg); } catch (_) {}
+      if (widget.conversationId == null) { try { await _cloudChat.syncMessage(aiMsg); } catch (_) {} }
     } catch (e) {
       setState(() => _isLoading = false);
       if (mounted) {
@@ -232,9 +231,9 @@ class _ChatScreenState extends State<ChatScreen> {
       ),
     );
     if (confirm == true) {
-      await _storage.clearChatHistory(userId: Supabase.instance.client.auth.currentUser?.id);
-      // Start a fresh cloud conversation; previous cloud records are preserved.
-      try { await _cloudChat.startNewConversation(); } catch (_) {}
+      await _storage.clearChatHistory(userId: Supabase.instance.client.auth.currentUser?.id, conversationId: widget.conversationId);
+      // Start a fresh cloud conversation only for the main chat; assistant sessions stay local and separate.
+      if (widget.conversationId == null) { try { await _cloudChat.startNewConversation(); } catch (_) {} }
       setState(() => _messages = []);
     }
   }
