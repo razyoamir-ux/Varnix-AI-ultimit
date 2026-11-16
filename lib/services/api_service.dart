@@ -7,11 +7,14 @@ class ApiService {
     required List<ChatMessage> history,
     required String userMessage,
     String? model,
+    String? systemInstruction,
   }) async {
     final recentHistory = history.length > 20
         ? history.sublist(history.length - 20)
         : history;
     final messages = <Map<String, String>>[
+      if (systemInstruction != null && systemInstruction.trim().isNotEmpty)
+        {'role': 'system', 'content': systemInstruction.trim()},
       for (final message in recentHistory)
         if (message.role == 'user' || message.role == 'assistant')
           {'role': message.role, 'content': message.content},
