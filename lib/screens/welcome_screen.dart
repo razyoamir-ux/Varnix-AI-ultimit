@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'chat_screen.dart';
+import 'app_shell_screen.dart';
 
 class WelcomeScreen extends StatefulWidget {
   const WelcomeScreen({super.key});
@@ -122,7 +122,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                         onPressed: () {
                           Navigator.of(context).pushReplacement(
                             MaterialPageRoute(
-                              builder: (_) => const ChatScreen(),
+                              builder: (_) => const AppShellScreen(),
                             ),
                           );
                         },
