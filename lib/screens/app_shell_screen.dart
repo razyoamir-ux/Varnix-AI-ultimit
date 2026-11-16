@@ -12,6 +12,7 @@ import 'code_projects_screen.dart';
 import 'developer_utilities_screen.dart';
 import 'announcements_screen.dart';
 import 'appearance_screen.dart';
+import 'html_playground_screen.dart';
 
 class AppShellScreen extends StatefulWidget {
   const AppShellScreen({super.key});
@@ -127,6 +128,7 @@ class _ToolsPage extends StatelessWidget {
     _ToolRow(icon: Icons.workspace_premium_outlined, title: 'پلن‌ها و اشتراک', subtitle: 'مشاهده پلن فعلی و امکانات حرفه‌ای', status: 'پلن‌ها', onTap: () => onOpen(2)),
     _ToolRow(icon: Icons.smart_toy_outlined, title: 'دستیارهای هوشمند', subtitle: 'انتخاب و ساخت دستیارهای اختصاصی', status: 'در حال توسعه'),
     _ToolRow(icon: Icons.code, title: 'آزمایشگاه کدنویسی', subtitle: 'ویرایش، اجرا و مشاهده خروجی Python و Java', status: 'جدید', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CodeLabScreen()))),
+    _ToolRow(icon: Icons.web, title: 'آزمایشگاه طراحی وب', subtitle: 'کدنویسی HTML، CSS و JavaScript با پیش‌نمایش داخل برنامه', status: 'جدید', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const HtmlPlaygroundScreen()))),
     _ToolRow(icon: Icons.library_books, title: 'مرور کتابخانه‌ها', subtitle: 'جست‌وجو و نصب بسته‌های Python و کتابخانه‌های Java', status: 'جدید', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PackageLibraryScreen()))),
     _ToolRow(icon: Icons.folder_special, title: 'پروژه‌های من', subtitle: 'ذخیره، مشاهده، کپی و مدیریت کدهای شخصی', status: 'جدید', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CodeProjectsScreen()))),
     _ToolRow(icon: Icons.auto_fix_high, title: 'ابزارهای رایگان', subtitle: 'قالب‌های آماده، بررسی متن و یادداشت سریع', status: 'رایگان', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const FreeToolsScreen()))),
