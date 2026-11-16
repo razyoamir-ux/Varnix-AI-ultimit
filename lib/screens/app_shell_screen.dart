@@ -9,6 +9,7 @@ import 'code_lab_screen.dart';
 import 'free_tools_screen.dart';
 import 'package_library_screen.dart';
 import 'code_projects_screen.dart';
+import 'developer_utilities_screen.dart';
 
 class AppShellScreen extends StatefulWidget {
   const AppShellScreen({super.key});
@@ -125,6 +126,8 @@ class _ToolsPage extends StatelessWidget {
     _ToolRow(icon: Icons.library_books, title: 'مرور کتابخانه‌ها', subtitle: 'جست‌وجو و نصب بسته‌های Python و کتابخانه‌های Java', status: 'جدید', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PackageLibraryScreen()))),
     _ToolRow(icon: Icons.folder_special, title: 'پروژه‌های من', subtitle: 'ذخیره، مشاهده، کپی و مدیریت کدهای شخصی', status: 'جدید', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CodeProjectsScreen()))),
     _ToolRow(icon: Icons.auto_fix_high, title: 'ابزارهای رایگان', subtitle: 'قالب‌های آماده، بررسی متن و یادداشت سریع', status: 'رایگان', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const FreeToolsScreen()))),
+    _ToolRow(icon: Icons.data_object, title: 'ابزار JSON', subtitle: 'اعتبارسنجی، مرتب‌سازی و فشرده‌سازی JSON', status: 'آفلاین', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const JsonToolScreen()))),
+    _ToolRow(icon: Icons.swap_horiz, title: 'تبدیل‌گر Base64', subtitle: 'رمزگذاری و بازکردن متن با پشتیبانی فارسی', status: 'آفلاین', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const Base64ToolScreen()))),
     _ToolRow(icon: Icons.image_outlined, title: 'تولید تصویر', subtitle: 'ساخت تصویر با هوش مصنوعی', status: 'محدود'),
     _ToolRow(icon: Icons.video_library_outlined, title: 'ساخت ویدئو', subtitle: 'ابزار ویدئویی و ارسال فایل', status: 'به‌زودی'),
     _ToolRow(icon: Icons.folder_open, title: 'فایل‌ها و اسناد', subtitle: 'مدیریت فایل‌های ارسالی', status: 'در حال توسعه'),
