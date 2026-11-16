@@ -154,7 +154,7 @@ class _ChatScreenState extends State<ChatScreen> {
         _messages.add(aiMsg);
         _isLoading = false;
       });
-      await _storage.saveChatHistory(_messages, userId: Supabase.instance.client.auth.currentUser?.id);
+      await _storage.saveChatHistory(_messages, userId: Supabase.instance.client.auth.currentUser?.id, conversationId: widget.conversationId);
       if (widget.conversationId == null) { try { await _cloudChat.syncMessage(aiMsg); } catch (_) {} }
     } catch (e) {
       setState(() => _isLoading = false);
