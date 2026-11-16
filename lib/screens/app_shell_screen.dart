@@ -14,6 +14,8 @@ import 'announcements_screen.dart';
 import 'appearance_screen.dart';
 import 'html_playground_screen.dart';
 import 'varnix_info_screen.dart';
+import 'assistants_screen.dart';
+import 'documents_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class AppShellScreen extends StatefulWidget {
@@ -137,7 +139,7 @@ class _ToolsPage extends StatelessWidget {
     _ToolRow(icon: Icons.notifications_active_outlined, title: 'اعلان‌های وارنیکس', subtitle: 'مشاهده اطلاعیه‌های رسمی داخل برنامه', status: 'اعلان', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AnnouncementsScreen()))),
     _ToolRow(icon: Icons.card_giftcard, title: 'دعوت دوستان', subtitle: 'کد دعوت اختصاصی و شمارش دعوت‌ها', status: 'رایگان', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ReferralPage()))),
     _ToolRow(icon: Icons.workspace_premium_outlined, title: 'پلن‌ها و اشتراک', subtitle: 'مشاهده پلن فعلی و امکانات حرفه‌ای', status: 'پلن‌ها', onTap: () => onOpen(2)),
-    _ToolRow(icon: Icons.smart_toy_outlined, title: 'دستیارهای هوشمند', subtitle: 'انتخاب و ساخت دستیارهای اختصاصی', status: 'در حال توسعه'),
+    _ToolRow(icon: Icons.smart_toy_outlined, title: 'دستیارهای هوشمند', subtitle: 'انتخاب دستیارهای آماده و ساخت دستیار شخصی', status: 'فعال', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AssistantsScreen()))),
     _ToolRow(icon: Icons.code, title: 'آزمایشگاه کدنویسی', subtitle: 'ویرایش، اجرا و مشاهده خروجی Python و Java', status: 'جدید', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CodeLabScreen()))),
     _ToolRow(icon: Icons.web, title: 'آزمایشگاه طراحی وب', subtitle: 'کدنویسی HTML، CSS و JavaScript با پیش‌نمایش داخل برنامه', status: 'جدید', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const HtmlPlaygroundScreen()))),
     _ToolRow(icon: Icons.library_books, title: 'مرور کتابخانه‌ها', subtitle: 'جست‌وجو و نصب بسته‌های Python و کتابخانه‌های Java', status: 'جدید', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PackageLibraryScreen()))),
@@ -147,7 +149,7 @@ class _ToolsPage extends StatelessWidget {
     _ToolRow(icon: Icons.swap_horiz, title: 'تبدیل‌گر Base64', subtitle: 'رمزگذاری و بازکردن متن با پشتیبانی فارسی', status: 'آفلاین', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const Base64ToolScreen()))),
     _ToolRow(icon: Icons.image_outlined, title: 'تولید تصویر', subtitle: 'ساخت تصویر با هوش مصنوعی', status: 'محدود'),
     _ToolRow(icon: Icons.video_library_outlined, title: 'ساخت ویدئو', subtitle: 'ابزار ویدئویی و ارسال فایل', status: 'به‌زودی'),
-    _ToolRow(icon: Icons.folder_open, title: 'فایل‌ها و اسناد', subtitle: 'مدیریت فایل‌های ارسالی', status: 'در حال توسعه'),
+    _ToolRow(icon: Icons.folder_open, title: 'فایل‌ها و اسناد', subtitle: 'ساخت، جست‌وجو، ویرایش و نگهداری یادداشت‌ها و اسناد روی دستگاه', status: 'فعال', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const DocumentsScreen()))),
     _ToolRow(icon: Icons.history, title: 'تاریخچه گفتگوها', subtitle: 'گفتگوهای ذخیره‌شده حساب', status: 'در گفتگو'),
     _ToolRow(icon: Icons.workspace_premium_outlined, title: 'اشتراک حرفه‌ای', subtitle: 'امکانات و شرایط نسخه حرفه‌ای', status: 'مشاهده از حساب'),
     const SizedBox(height: 12),
