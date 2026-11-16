@@ -149,7 +149,7 @@ serve(async (req) => {
       return json({ error: "Support mode cannot use custom assistant instructions" }, 400);
     }
     if (systemInstruction.trim().length > 0) {
-      systemPrompt += "\\n\\nUser-created assistant instructions (account-provided configuration):\\n" + systemInstruction.trim();
+      systemPrompt += "\n\nUser-created assistant instructions (account-provided configuration):\n" + systemInstruction.trim();
     }
 
     const userInstructions = payload.user_instructions ?? "";
