@@ -45,6 +45,24 @@ class StorageService {
     await _secureStorage.delete(key: _apiKeyKey);
   }
 
+  // Provider-specific API keys are encrypted in Android Keystore-backed storage.
+  static const List<String> providerIds = ['groq', 'gemini', 'openrouter', 'cerebras'];
+
+  Future<String?> getProviderApiKey(String provider) async {
+    if (!providerIds.contains(provider)) return null;
+    return _secureStorage.read(key: 'provider_api_key_$provider');
+  }
+
+  Future<void> saveProviderApiKey(String provider, String key) async {
+    if (!providerIds.contains(provider)) throw ArgumentError('Unsupported provider');
+    await _secureStorage.write(key: 'provider_api_key_$provider', value: key.trim());
+  }
+
+  Future<void> deleteProviderApiKey(String provider) async {
+    if (!providerIds.contains(provider)) return;
+    await _secureStorage.delete(key: 'provider_api_key_$provider');
+  }
+
   // Chat History
   Future<List<ChatMessage>> loadChatHistory() async {
     final prefs = await SharedPreferences.getInstance();
