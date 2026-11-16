@@ -15,7 +15,8 @@ import 'owner_panel_screen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class ChatScreen extends StatefulWidget {
-  const ChatScreen({super.key});
+  final String? assistantInstruction;
+  const ChatScreen({super.key, this.assistantInstruction});
 
   @override
   State<ChatScreen> createState() => _ChatScreenState();
@@ -34,6 +35,7 @@ class _ChatScreenState extends State<ChatScreen> {
   bool _isInitialized = false;
   bool _isPro = false;
   bool _isAdmin = false;
+  bool _assistantInstructionUsed = false;
   String _selectedModel = 'openrouter/free';
   List<Map<String, dynamic>> _availableModels = [];
 
@@ -111,10 +113,14 @@ class _ChatScreenState extends State<ChatScreen> {
     final text = _controller.text.trim();
     if (text.isEmpty || _isLoading) return;
 
+    final instruction = widget.assistantInstruction;
+    final messageContent = instruction != null && instruction.trim().isNotEmpty && !_assistantInstructionUsed
+        ? '$instruction\n\nدرخواست کاربر:\n$text'
+        : text;
     final userMsg = ChatMessage(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       role: 'user',
-      content: text,
+      content: messageContent,
       timestamp: DateTime.now(),
     );
 
@@ -130,7 +136,7 @@ class _ChatScreenState extends State<ChatScreen> {
     try {
       final reply = await _api.sendMessage(
         history: _messages.sublist(0, _messages.length - 1),
-        userMessage: text,
+        userMessage: messageContent,
         model: _selectedModel,
       );
 
