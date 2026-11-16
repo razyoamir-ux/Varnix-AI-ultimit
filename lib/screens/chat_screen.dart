@@ -128,7 +128,6 @@ class _ChatScreenState extends State<ChatScreen> {
 
     setState(() {
       _messages.add(userMsg);
-      _assistantInstructionUsed = true;
       _isLoading = true;
       _controller.clear();
     });
@@ -153,6 +152,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
       setState(() {
         _messages.add(aiMsg);
+        _assistantInstructionUsed = true;
         _isLoading = false;
       });
       await _storage.saveChatHistory(_messages, userId: Supabase.instance.client.auth.currentUser?.id);
