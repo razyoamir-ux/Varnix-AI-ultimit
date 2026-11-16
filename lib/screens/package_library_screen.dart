@@ -10,8 +10,7 @@ class PackageLibraryScreen extends StatefulWidget {
 class _PackageLibraryScreenState extends State<PackageLibraryScreen> {
   String _language = 'python';
   String _query = '';
-  bool _busy = false;
-  String _status = 'کتابخانه را جست‌وجو کن و بسته موردنیازت را انتخاب کن.';
+  String _status = 'هر بار فقط یک کتابخانه را انتخاب کن؛ فقط دستور همان مورد کپی می‌شود.';
 
   static const _python = <Map<String, String>>[
     {'name': 'requests', 'description': 'ارسال درخواست‌های HTTP', 'category': 'شبکه'},
@@ -31,16 +30,16 @@ class _PackageLibraryScreenState extends State<PackageLibraryScreen> {
     {'name': 'org.junit.jupiter:junit-jupiter:5.10.2', 'description': 'تست واحد برنامه‌ها', 'category': 'تست'},
   ];
 
-  Future<void> _install(String name) async {
-    if (_busy) return;
+  Future<void> _copyInstallCommand(String name) async {
     final command = _language == 'python'
-        ? 'pip install $name'
+        ? 'pip install "$name"'
         : 'mvn dependency:get -Dartifact=$name';
     await Clipboard.setData(ClipboardData(text: command));
     if (!mounted) return;
-    setState(() => _status = _language == 'python'
-        ? 'دستور «$command» کپی شد. محیط اجرای ابری وارنیکس موقتی است و نصب بسته را بین اجراها نگه نمی‌دارد؛ این دستور را در محیط Python خودت اجرا کن.'
-        : 'دستور Maven کپی شد. نصب مستقیم وابستگی Java در Runner فعلی فعال نیست.');
+    setState(() => _status = 'فقط دستور مربوط به «$name» کپی شد: $command\nاین نسخه دستور را کپی می‌کند؛ نصب واقعی و ماندگار بسته‌ها هنوز به Runner اختصاصی نیاز دارد.');
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('دستور نصب $name کپی شد.')),
+    );
   }
 
   @override
@@ -83,17 +82,16 @@ class _PackageLibraryScreenState extends State<PackageLibraryScreen> {
           ),
           const SizedBox(height: 12),
           ...filtered.map((p) => Card(
+            key: ValueKey('$_language-${p['name']}'),
             color: const Color(0xFF211936),
             child: ListTile(
               title: Text(p['name']!, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
               subtitle: Text('${p['description']} • ${p['category']}', style: const TextStyle(color: Colors.white60)),
-              trailing: _busy && _language == 'python'
-                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                : IconButton(
-                    tooltip: 'کپی دستور نصب',
-                    icon: const Icon(Icons.copy, color: Color(0xFFA78BFA)),
-                    onPressed: _busy ? null : () => _install(p['name']!),
-                  ),
+              trailing: IconButton(
+                tooltip: 'کپی دستور همین کتابخانه',
+                icon: const Icon(Icons.copy, color: Color(0xFFA78BFA)),
+                onPressed: () => _copyInstallCommand(p['name']!),
+              ),
             ),
           )),
           if (filtered.isEmpty) const Padding(
@@ -102,7 +100,7 @@ class _PackageLibraryScreenState extends State<PackageLibraryScreen> {
           ),
           const SizedBox(height: 8),
           const Text(
-            'نکته: این صفحه فهرست بسته‌ها و دستور نصب را آماده می‌کند. نصب پایدار بسته‌ها در محیط ابری و Maven هنوز به Runner اختصاصی نیاز دارد؛ بنابراین هیچ نصب موفقی به‌صورت کاذب گزارش نمی‌شود.',
+            'این صفحه فقط دستور بسته انتخاب‌شده را کپی می‌کند و همه بسته‌ها را یکجا نصب نمی‌کند. نصب واقعی و ماندگار بسته‌ها در محیط ابری به Runner اختصاصی نیاز دارد.',
             style: TextStyle(color: Colors.white54, fontSize: 12, height: 1.5),
           ),
         ]),
