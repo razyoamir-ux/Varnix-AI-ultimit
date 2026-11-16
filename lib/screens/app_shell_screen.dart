@@ -168,10 +168,25 @@ class ReferralPage extends StatelessWidget {
       ])),
       const SizedBox(height: 14),
       FilledButton.icon(onPressed: user == null ? null : () => Share.share(inviteText), icon: const Icon(Icons.share), label: const Text('اشتراک‌گذاری کد دعوت')),
-      const SizedBox(height: 20),
+      const SizedBox(height: 18),
+      FutureBuilder<dynamic>(
+        future: Supabase.instance.client.rpc('get_my_referral_count'),
+        builder: (context, snapshot) => Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(color: const Color(0xFF211936), borderRadius: BorderRadius.circular(14)),
+          child: Row(children: [
+            const Icon(Icons.people_alt_outlined, color: Color(0xFFA78BFA), size: 28),
+            const SizedBox(width: 12),
+            const Expanded(child: Text('دعوت‌های موفق ثبت‌شده', style: TextStyle(color: Colors.white))),
+            Text(snapshot.hasData ? snapshot.data.toString() : (snapshot.hasError ? '—' : '...'),
+              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 20)),
+          ]),
+        ),
+      ),
+      const SizedBox(height: 14),
       Container(padding: const EdgeInsets.all(14), decoration: BoxDecoration(color: const Color(0xFF211936), borderRadius: BorderRadius.circular(14)), child: const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text('نحوه استفاده', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-        SizedBox(height: 8), Text('۱. کد بالا را برای دوستت بفرست.\n۲. دوستت هنگام ساخت حساب، کد را وارد می‌کند.\n۳. قابلیت ثبت و نمایش دعوت‌های موفق و پاداش‌ها در مرحله بعد به سیستم حساب‌ها متصل می‌شود.', style: TextStyle(color: Colors.white70, height: 1.7)),
+        SizedBox(height: 8), Text('۱. کد بالا را برای دوستت بفرست.\\n۲. دوستت هنگام ثبت‌نام، کد را در کادر کد دعوت وارد می‌کند.\\n۳. پس از ساخت حساب، دعوت معتبر در آمار بالا ثبت می‌شود.', style: TextStyle(color: Colors.white70, height: 1.7)),
       ])),
     ]));
   }
