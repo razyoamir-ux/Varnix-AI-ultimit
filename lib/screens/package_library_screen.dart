@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 class PackageLibraryScreen extends StatefulWidget {
   const PackageLibraryScreen({super.key});
