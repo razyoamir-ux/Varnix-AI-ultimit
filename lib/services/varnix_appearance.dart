@@ -83,7 +83,7 @@ class VarnixAppearance extends ChangeNotifier {
       cardColor: const Color(0xFF211936),
       fontFamily: fontFamily,
       visualDensity: compact ? VisualDensity.compact : VisualDensity.standard,
-      textTheme: ThemeData.dark().textTheme.apply(fontFamily: fontFamily),
+      textTheme: ThemeData.dark().textTheme.apply(fontFamily: fontFamily, fontSizeFactor: textScale),
       snackBarTheme: const SnackBarThemeData(behavior: SnackBarBehavior.floating),
     );
   }
