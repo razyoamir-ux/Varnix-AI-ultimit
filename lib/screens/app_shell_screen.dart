@@ -11,6 +11,7 @@ import 'package_library_screen.dart';
 import 'code_projects_screen.dart';
 import 'developer_utilities_screen.dart';
 import 'announcements_screen.dart';
+import 'appearance_screen.dart';
 
 class AppShellScreen extends StatefulWidget {
   const AppShellScreen({super.key});
@@ -349,7 +350,7 @@ class _AccountPage extends StatelessWidget {
       const SizedBox(height: 22),
       _AccountTile(icon: Icons.card_giftcard, title: 'کد دعوت دوستان', onTap: onReferral),
       _AccountTile(icon: Icons.workspace_premium, title: 'پلن‌ها و اشتراک', onTap: () => _showInfo(context, 'پلن‌ها', 'جزئیات پلن‌ها از نوار پایین برنامه قابل مشاهده است.')),
-      _AccountTile(icon: Icons.settings, title: 'تنظیمات برنامه', onTap: () => _showInfo(context, 'تنظیمات', 'تنظیمات مدل و اتصال API از منوی گفتگوی هوشمند قابل دسترسی است.')),
+      _AccountTile(icon: Icons.palette_outlined, title: 'شخصی‌سازی ظاهر برنامه', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AppearanceScreen()))),
       _AccountTile(icon: Icons.admin_panel_settings, title: 'پنل مالک', onTap: onOwner),
       _AccountTile(icon: Icons.logout, title: 'خروج از حساب', color: Colors.orangeAccent, onTap: onLogout),
     ]));
