@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'chat_screen.dart';
 import 'owner_panel_screen.dart';
 import 'auth_screen.dart';
+import 'code_lab_screen.dart';
 
 class AppShellScreen extends StatefulWidget {
   const AppShellScreen({super.key});
@@ -117,6 +118,7 @@ class _ToolsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) => _PageFrame(title: 'ابزارهای هوشمند', subtitle: 'بخش‌های مختلف وارنیکس', child: Column(children: [
     _ToolRow(icon: Icons.smart_toy_outlined, title: 'دستیارهای هوشمند', subtitle: 'انتخاب و ساخت دستیارهای اختصاصی', status: 'در حال توسعه'),
+    _ToolRow(icon: Icons.code, title: 'آزمایشگاه کدنویسی', subtitle: 'ویرایش، اجرا و مشاهده خروجی Python و Java', status: 'جدید', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CodeLabScreen()))),
     _ToolRow(icon: Icons.image_outlined, title: 'تولید تصویر', subtitle: 'ساخت تصویر با هوش مصنوعی', status: 'محدود'),
     _ToolRow(icon: Icons.video_library_outlined, title: 'ساخت ویدئو', subtitle: 'ابزار ویدئویی و ارسال فایل', status: 'به‌زودی'),
     _ToolRow(icon: Icons.folder_open, title: 'فایل‌ها و اسناد', subtitle: 'مدیریت فایل‌های ارسالی', status: 'در حال توسعه'),
@@ -134,14 +136,14 @@ class _ToolRow extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     margin: const EdgeInsets.only(bottom: 10), padding: const EdgeInsets.all(14),
     decoration: BoxDecoration(color: const Color(0xFF211936), borderRadius: BorderRadius.circular(15)),
-    child: Row(children: [
+    child: InkWell(onTap: onTap, borderRadius: BorderRadius.circular(15), child: Row(children: [
       CircleAvatar(backgroundColor: const Color(0xFF8B5CF6).withOpacity(.18), child: Icon(icon, color: const Color(0xFFA78BFA))),
       const SizedBox(width: 12), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text(title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         const SizedBox(height: 3), Text(subtitle, style: const TextStyle(color: Colors.white54, fontSize: 12)),
       ])),
       Text(status, style: const TextStyle(color: Color(0xFFA78BFA), fontSize: 11)),
-    ]),
+    ])),
   );
 }
 
