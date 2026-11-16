@@ -52,7 +52,7 @@ class _AssistantsScreenState extends State<AssistantsScreen> {
   }
   void _start(Map<String,dynamic> item){
     final instruction='تو دستیار تخصصی «'+item['name'].toString()+'» هستی. '+(item['description']??'').toString()+'\n\nدستورالعمل اصلی:\n'+item['system_prompt'].toString()+'\n\nهمیشه مطابق این نقش پاسخ بده و به زبان کاربر صحبت کن.';
-    Navigator.push(context,MaterialPageRoute(builder:(_)=>ChatScreen(assistantInstruction:instruction)));
+    Navigator.push(context,MaterialPageRoute(builder:(_)=>ChatScreen(assistantInstruction:instruction,conversationId:'assistant_${item['id']}')));
   }
   Widget _card(Map<String,dynamic> item,{required bool personal})=>Card(color:_panel,child:Padding(padding:const EdgeInsets.all(12),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
     Row(children:[Text(item['icon']?.toString()??'✨',style:const TextStyle(fontSize:26)),const SizedBox(width:10),Expanded(child:Text(item['name']?.toString()??'دستیار',style:const TextStyle(color:Colors.white,fontWeight:FontWeight.bold,fontSize:16))),if(personal)PopupMenuButton<String>(onSelected:(v){if(v=='edit')_edit(item);if(v=='delete')_delete(item);},itemBuilder:(_)=>const [PopupMenuItem(value:'edit',child:Text('ویرایش')),PopupMenuItem(value:'delete',child:Text('حذف'))])]),
