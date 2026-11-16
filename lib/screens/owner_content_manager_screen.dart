@@ -22,7 +22,7 @@ class _OwnerContentManagerScreenState extends State<OwnerContentManagerScreen> {
   String err(Object e)=>e.toString().replaceFirst('Exception: ','');
   Future<void> load() async {
     setState(()=>loading=true);
-    try { final result=await db.from(selected).select().order('updated_at',ascending:false).limit(250); rows=List<Map<String,dynamic>>.from(result); error=null; }
+    try { final result=await db.from(selected).select().order(selected=='app_releases'?'created_at':'updated_at',ascending:false).limit(250); rows=List<Map<String,dynamic>>.from(result); error=null; }
     catch(e) { rows=[]; error=err(e); }
     if(mounted)setState(()=>loading=false);
   }
@@ -98,7 +98,7 @@ class _OwnerContentManagerScreenState extends State<OwnerContentManagerScreen> {
         if(selected=='content_documents'&&!['about','terms','privacy'].contains(row['slug']))throw Exception('شناسه متن معتبر نیست.');
         for(final k in ['store_url','download_url','image_url','video_url']){final v=row[k]?.toString()??'';if(v.isNotEmpty&&Uri.tryParse(v)?.scheme!='https')throw Exception('لینک '+label(k)+' باید HTTPS باشد.');}
         if(selected=='addons'&&!['feature_flag','remote_content','external_link'].contains(row['capability_type']))throw Exception('نوع افزونه مجاز نیست.');
-        row['updated_at']=DateTime.now().toUtc().toIso8601String();
+        if(selected!='app_releases')row['updated_at']=DateTime.now().toUtc().toIso8601String();
         setState(()=>saving=true);
         if(old==null){await db.from(selected).insert(row);}else{await db.from(selected).update(row).eq('id',old['id']);}
         if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('محتوا با موفقیت ذخیره شد.')));
