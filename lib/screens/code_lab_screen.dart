@@ -91,7 +91,7 @@ class _CodeLabScreenState extends State<CodeLabScreen> {
               SegmentedButton<String>(
                 segments: const [
                   ButtonSegment(value: 'python', label: Text('Python'), icon: Icon(Icons.code)),
-                  ButtonSegment(value: 'java', label: Text('Java'), icon: Icon(Icons coffee)),
+                  ButtonSegment(value: 'java', label: Text('Java'), icon: Icon(Icons.coffee)),
                 ],
                 selected: {_language},
                 onSelectionChanged: (v) => _changeLanguage(v.first),
