@@ -83,10 +83,10 @@ class _FreeToolsScreenState extends State<FreeToolsScreen> {
     final text = _textController.text;
     final words = text.trim().isEmpty
         ? 0
-        : text.trim().split(RegExp(r'\\s+')).length;
+        : text.trim().split(RegExp(r'\s+')).length;
     final paragraphs = text.trim().isEmpty
         ? 0
-        : text.trim().split(RegExp(r'\\n\\s*\\n')).length;
+        : text.trim().split(RegExp(r'\n\s*\n')).length;
 
     return Directionality(
       textDirection: TextDirection.rtl,
