@@ -29,8 +29,8 @@ if (gradle.startParameter.taskNames.any { it.toLowerCase().contains('release') }
 
 android {
     namespace "com.varnix.ai.ultimateplus"
-    // Current AndroidX plugins in this app require API 36 at compile time.
-    // This does not change the minimum supported Android version or runtime target.
+    // Current AndroidX plugins require API 36 at compile time.
+    // Keep Android 9 (API 28) as the minimum supported OS.
     compileSdk 36
     ndkVersion flutter.ndkVersion
 
@@ -65,8 +65,10 @@ android {
     buildTypes {
         release {
             signingConfig signingConfigs.release
-            minifyEnabled false
-            shrinkResources false
+            // R8 removes unused Java/Kotlin bytecode and resource shrinking
+            // removes resources made unreachable by minification.
+            minifyEnabled true
+            shrinkResources true
         }
     }
 }
