@@ -34,31 +34,14 @@ class _PackageLibraryScreenState extends State<PackageLibraryScreen> {
 
   Future<void> _install(String name) async {
     if (_busy) return;
-    if (_language == 'java') {
-      final command = 'mvn dependency:get -Dartifact=$name';
-      await Clipboard.setData(ClipboardData(text: command));
-      setState(() => _status = 'دستور Maven کپی شد. برای نصب واقعی وابستگی Java، محیط اجرای Maven اختصاصی باید به سرویس کدنویسی متصل شود.');
-      return;
-    }
-    setState(() { _busy = true; _status = 'در حال درخواست نصب $name ...'; });
-    try {
-      final response = await Supabase.instance.client.functions.invoke(
-        'code-runner',
-        body: {'action': 'install', 'language': 'python', 'package': name},
-      );
-      final data = response.data;
-      if (data is Map && data['error'] != null) {
-        setState(() => _status = data['error'].toString());
-      } else {
-        setState(() => _status = (data is Map ? data['message'] : null)?.toString() ?? 'درخواست نصب ارسال شد.');
-      }
-    } on FunctionException catch (e) {
-      setState(() => _status = 'نصب انجام نشد: ${e.details ?? e.reasonPhrase ?? e.toString()}');
-    } catch (e) {
-      setState(() => _status = 'خطا در ارتباط با سرویس نصب: $e');
-    } finally {
-      if (mounted) setState(() => _busy = false);
-    }
+    final command = _language == 'python'
+        ? 'pip install $name'
+        : 'mvn dependency:get -Dartifact=$name';
+    await Clipboard.setData(ClipboardData(text: command));
+    if (!mounted) return;
+    setState(() => _status = _language == 'python'
+        ? 'دستور «$command» کپی شد. محیط اجرای ابری وارنیکس موقتی است و نصب بسته را بین اجراها نگه نمی‌دارد؛ این دستور را در محیط Python خودت اجرا کن.'
+        : 'دستور Maven کپی شد. نصب مستقیم وابستگی Java در Runner فعلی فعال نیست.');
   }
 
   @override
@@ -108,8 +91,8 @@ class _PackageLibraryScreenState extends State<PackageLibraryScreen> {
               trailing: _busy && _language == 'python'
                 ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
                 : IconButton(
-                    tooltip: _language == 'python' ? 'نصب بسته' : 'کپی دستور Maven',
-                    icon: Icon(_language == 'python' ? Icons.download : Icons.copy, color: const Color(0xFFA78BFA)),
+                    tooltip: 'کپی دستور نصب',
+                    icon: const Icon(Icons.copy, color: Color(0xFFA78BFA)),
                     onPressed: _busy ? null : () => _install(p['name']!),
                   ),
             ),
@@ -120,7 +103,7 @@ class _PackageLibraryScreenState extends State<PackageLibraryScreen> {
           ),
           const SizedBox(height: 8),
           const Text(
-            'نکته: نصب Python از طریق سرویس اجرای ابری انجام می‌شود. نصب از میرور اختصاصی ایران و نصب Maven در محیط Java به Runner اختصاصی متصل به مخازن داخلی نیاز دارد؛ این دو مسیر هنوز فعال نشده‌اند.',
+            'نکته: این صفحه فهرست بسته‌ها و دستور نصب را آماده می‌کند. نصب پایدار بسته‌ها در محیط ابری و Maven هنوز به Runner اختصاصی نیاز دارد؛ بنابراین هیچ نصب موفقی به‌صورت کاذب گزارش نمی‌شود.',
             style: TextStyle(color: Colors.white54, fontSize: 12, height: 1.5),
           ),
         ]),
