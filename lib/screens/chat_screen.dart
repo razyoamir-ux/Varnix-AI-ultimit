@@ -16,7 +16,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 class ChatScreen extends StatefulWidget {
   final String? assistantInstruction;
-  const ChatScreen({super.key, this.assistantInstruction});
+  final String? initialPrompt;
+  const ChatScreen({super.key, this.assistantInstruction, this.initialPrompt});
 
   @override
   State<ChatScreen> createState() => _ChatScreenState();
@@ -42,6 +43,7 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   void initState() {
     super.initState();
+    if (widget.initialPrompt != null) _controller.text = widget.initialPrompt!;
     _loadData();
   }
 
@@ -114,18 +116,19 @@ class _ChatScreenState extends State<ChatScreen> {
     if (text.isEmpty || _isLoading) return;
 
     final instruction = widget.assistantInstruction;
-    final messageContent = instruction != null && instruction.trim().isNotEmpty && !_assistantInstructionUsed
-        ? '$instruction\n\nدرخواست کاربر:\n$text'
-        : text;
+    final systemInstruction = instruction != null && instruction.trim().isNotEmpty && !_assistantInstructionUsed
+        ? instruction
+        : null;
     final userMsg = ChatMessage(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       role: 'user',
-      content: messageContent,
+      content: text,
       timestamp: DateTime.now(),
     );
 
     setState(() {
       _messages.add(userMsg);
+      _assistantInstructionUsed = true;
       _isLoading = true;
       _controller.clear();
     });
@@ -136,8 +139,9 @@ class _ChatScreenState extends State<ChatScreen> {
     try {
       final reply = await _api.sendMessage(
         history: _messages.sublist(0, _messages.length - 1),
-        userMessage: messageContent,
+        userMessage: text,
         model: _selectedModel,
+        systemInstruction: systemInstruction,
       );
 
       final aiMsg = ChatMessage(
