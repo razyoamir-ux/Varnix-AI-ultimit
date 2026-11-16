@@ -1,8 +1,8 @@
 create schema if not exists private;
 create or replace function private.varnix_is_admin() returns boolean language sql stable security definer set search_path='' as $$ select exists(select 1 from public.profiles p where p.id=(select auth.uid()) and p.role='admin'); $$;
 revoke all on function private.varnix_is_admin() from public;
-grant usage on schema private to anon,authenticated;
-grant execute on function private.varnix_is_admin() to anon,authenticated;
+grant usage on schema private to authenticated;
+grant execute on function private.varnix_is_admin() to authenticated;
 create table if not exists public.content_documents(id uuid primary key default gen_random_uuid(),slug text not null unique check(slug in ('about','terms','privacy')),title text not null,body text not null default '',version text not null default '1.0',updated_at timestamptz not null default now(),is_published boolean not null default true);
 create table if not exists public.other_apps(id uuid primary key default gen_random_uuid(),name text not null,slug text not null unique,description text not null default '',icon_url text,store_url text,status text not null default 'coming_soon' check(status in ('coming_soon','published')),sort_order integer not null default 0,is_active boolean not null default true,updated_at timestamptz not null default now());
 create table if not exists public.app_releases(id uuid primary key default gen_random_uuid(),version text not null unique,build_number integer not null default 0,title text not null,notes text not null default '',download_url text,is_mandatory boolean not null default false,min_supported_version text,is_published boolean not null default false,published_at timestamptz,created_at timestamptz not null default now());
@@ -55,4 +55,29 @@ values
 ('welcome-guide','راهنمای شروع','راهنمای شروع سریع و نکته‌های اولیه وارنیکس.','school','remote_content','{"body":"برای شروع، ابتدا حساب خود را بساز، سپس در تنظیمات مدل و کلید API خود را وارد کن. هرگز کلید API را در گفتگو یا برای افراد دیگر ارسال نکن."}'::jsonb,false,1),
 ('help-center','مرکز راهنما','پیوند به صفحه راهنمای رسمی وارنیکس.','help','external_link','{"url":"https://example.com"}'::jsonb,false,2),
 ('beta-tools','ابزارهای آزمایشی','کلید نمایشی برای فعال‌سازی قابلیت‌های آزمایشی در نسخه‌های آینده.','science','feature_flag','{"flag":"beta_tools"}'::jsonb,false,3)
+on conflict(slug) do nothing;
+
+
+insert into public.content_documents(slug,title,body,version,is_published) values
+('privacy','حریم خصوصی وارنیکس', 'حریم خصوصی Varnix AI
+
+این صفحه توضیح می‌دهد که برنامه برای ارائه خدمات چه نوع اطلاعاتی را ممکن است پردازش کند. این متن اطلاع‌رسانی اولیه است و ناشر باید پیش از انتشار عمومی، اطلاعات تماس رسمی، جزئیات دقیق نگهداری داده‌ها و الزامات قانونی محل عرضه را تکمیل و بررسی کند.
+
+۱. اطلاعات حساب: شناسه حساب، نشانی ایمیل، نام نمایشی و اطلاعات وضعیت اشتراک برای ایجاد و مدیریت حساب استفاده می‌شوند.
+
+۲. گفتگوها و محتوای ارسالی: پیام‌ها و تاریخچه گفتگو ممکن است برای ارائه قابلیت همگام‌سازی در پایگاه داده برنامه ذخیره شوند. فایل‌ها یا تصاویر فقط در صورت انتخاب و ارسال توسط کاربر برای پردازش دریافت می‌شوند.
+
+۳. پردازش هوش مصنوعی: برای تولید پاسخ، محتوای لازم از درخواست کاربر به ارائه‌دهنده مدل هوش مصنوعی انتخاب‌شده ارسال می‌شود. پردازش و نگهداری احتمالی داده نزد آن ارائه‌دهنده تابع سیاست حریم خصوصی و شرایط همان ارائه‌دهنده است.
+
+۴. فایل‌ها: فضای ذخیره‌سازی رسانه وارنیکس خصوصی پیکربندی شده است و دسترسی به فایل‌های حساب باید بر اساس مجوزهای همان حساب انجام شود.
+
+۵. خرید و اشتراک: اطلاعات سفارش، مبلغ، وضعیت پرداخت و شناسه پیگیری ممکن است برای فعال‌سازی و پشتیبانی اشتراک ذخیره شوند. اطلاعات کامل کارت بانکی نباید در برنامه ذخیره شود و توسط درگاه یا فروشگاه پرداخت پردازش می‌شود.
+
+۶. نگهداری و امنیت: برنامه از احراز هویت، کنترل دسترسی و سیاست‌های امنیتی پایگاه داده برای حفاظت از اطلاعات استفاده می‌کند. هیچ سامانه‌ای امنیت مطلق ندارد؛ اطلاعات حساس و غیرضروری را در گفتگوها ارسال نکنید.
+
+۷. حقوق کاربر: برای درخواست بررسی، اصلاح یا حذف حساب و داده‌های مرتبط، از راه ارتباطی رسمی ناشر که در صفحه فروشگاه یا کانال رسمی برنامه درج می‌شود استفاده کنید. ناشر باید راه ارتباطی و زمان‌بندی رسیدگی را پیش از انتشار تکمیل کند.
+
+۸. تغییرات: نسخه به‌روزشده این متن از طریق برنامه منتشر می‌شود.
+
+توجه: این متن پیش‌نویس است و تا تکمیل اطلاعات تماس ناشر و بررسی حقوقی، نباید به‌عنوان سیاست نهایی و تأییدشده تلقی شود.', '1.0', true)
 on conflict(slug) do nothing;
