@@ -6,6 +6,7 @@ import 'chat_screen.dart';
 import 'owner_panel_screen.dart';
 import 'auth_screen.dart';
 import 'code_lab_screen.dart';
+import 'free_tools_screen.dart';
 
 class AppShellScreen extends StatefulWidget {
   const AppShellScreen({super.key});
@@ -16,11 +17,8 @@ class AppShellScreen extends StatefulWidget {
 class _AppShellScreenState extends State<AppShellScreen> {
   int _index = 0;
   static const _purple = Color(0xFF8B5CF6);
-  final List<String> _titles = ['خانه', 'گفتگو', 'ابزارهای هوشمند', 'دعوت دوستان', 'حساب کاربری'];
-
   void _go(int index) {
     setState(() => _index = index);
-    Navigator.popUntil(context, (route) => route.isFirst);
   }
 
   @override
@@ -119,6 +117,7 @@ class _ToolsPage extends StatelessWidget {
   Widget build(BuildContext context) => _PageFrame(title: 'ابزارهای هوشمند', subtitle: 'بخش‌های مختلف وارنیکس', child: Column(children: [
     _ToolRow(icon: Icons.smart_toy_outlined, title: 'دستیارهای هوشمند', subtitle: 'انتخاب و ساخت دستیارهای اختصاصی', status: 'در حال توسعه'),
     _ToolRow(icon: Icons.code, title: 'آزمایشگاه کدنویسی', subtitle: 'ویرایش، اجرا و مشاهده خروجی Python و Java', status: 'جدید', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CodeLabScreen()))),
+    _ToolRow(icon: Icons.auto_fix_high, title: 'ابزارهای رایگان', subtitle: 'قالب‌های آماده، بررسی متن و یادداشت سریع', status: 'رایگان', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const FreeToolsScreen()))),
     _ToolRow(icon: Icons.image_outlined, title: 'تولید تصویر', subtitle: 'ساخت تصویر با هوش مصنوعی', status: 'محدود'),
     _ToolRow(icon: Icons.video_library_outlined, title: 'ساخت ویدئو', subtitle: 'ابزار ویدئویی و ارسال فایل', status: 'به‌زودی'),
     _ToolRow(icon: Icons.folder_open, title: 'فایل‌ها و اسناد', subtitle: 'مدیریت فایل‌های ارسالی', status: 'در حال توسعه'),
@@ -131,7 +130,8 @@ class _ToolsPage extends StatelessWidget {
 
 class _ToolRow extends StatelessWidget {
   final IconData icon; final String title; final String subtitle; final String status;
-  const _ToolRow({required this.icon, required this.title, required this.subtitle, required this.status});
+  final VoidCallback? onTap;
+  const _ToolRow({required this.icon, required this.title, required this.subtitle, required this.status, this.onTap});
   @override
   Widget build(BuildContext context) => Container(
     margin: const EdgeInsets.only(bottom: 10), padding: const EdgeInsets.all(14),
