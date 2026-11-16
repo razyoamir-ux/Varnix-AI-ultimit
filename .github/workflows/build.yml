@@ -10,6 +10,7 @@ on:
       - feat/multipage-navigation-referrals
       - feat/permission-onboarding-file-access
       - feat/varnix-content-terms-updates
+      - feat/android9-apk-size-optimization
   pull_request:
     branches:
       - main
@@ -17,6 +18,7 @@ on:
       - feat/cloud-sync-and-owner-api-keys
       - feat/multipage-navigation-referrals
       - feat/permission-onboarding-file-access
+      - feat/varnix-content-terms-updates
 
 permissions:
   contents: read
@@ -104,27 +106,35 @@ jobs:
       - name: Install Android SDK 36
         run: |
           set -euo pipefail
-          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36"
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "build-tools;36.0.0"
       - name: Generate Gradle Wrapper 8.14.3
         run: gradle -p android wrapper --gradle-version 8.14.3 --distribution-type bin
-      - name: Build signed Release APK
+      - name: Build signed ABI-specific Release APKs
         env:
           KEYSTORE_PATH: release-key.jks
           STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-        run: flutter build apk --release
-      - name: Verify APK signature
         run: |
-          APK=build/app/outputs/flutter-apk/app-release.apk
-          test -s "$APK"
+          set -euo pipefail
+          mkdir -p dist
+          flutter build apk --release --split-per-abi
+          cp build/app/outputs/flutter-apk/*-release.apk dist/
+          flutter build apk --release
+          cp build/app/outputs/flutter-apk/app-release.apk dist/varnix-universal-release.apk
+      - name: Verify all APK signatures
+        run: |
+          set -euo pipefail
           APKSIGNER="$ANDROID_HOME/build-tools/36.0.0/apksigner"
-          test -x "$APKSIGNER" || { echo "Android apksigner not found at $APKSIGNER"; exit 1; }
-          "$APKSIGNER" verify --verbose "$APK"
-      - name: Upload signed APK
+          test -x "$APKSIGNER"
+          for APK in dist/*.apk; do
+            test -s "$APK"
+            "$APKSIGNER" verify --verbose "$APK"
+          done
+      - name: Upload optimized signed APKs
         uses: actions/upload-artifact@v4
         with:
-          name: varnix-ai-release-${{ github.run_number }}
-          path: build/app/outputs/flutter-apk/app-release.apk
+          name: varnix-ai-optimized-release-${{ github.run_number }}
+          path: dist/*.apk
           retention-days: 30
           if-no-files-found: error
