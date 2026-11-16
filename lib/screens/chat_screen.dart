@@ -10,6 +10,7 @@ import '../widgets/message_bubble.dart';
 import '../widgets/typing_indicator.dart';
 import '../services/backend_service.dart';
 import 'auth_screen.dart';
+import 'provider_connections_screen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class ChatScreen extends StatefulWidget {
@@ -113,10 +114,18 @@ class _ChatScreenState extends State<ChatScreen> {
     await _storage.saveChatHistory(_messages);
 
     try {
+      final selected = _availableModels.firstWhere(
+        (m) => m['model_id'] == _selectedModel,
+        orElse: () => {'provider': 'openrouter'},
+      );
+      final providerId = (selected['provider'] ?? 'openrouter').toString();
+      final providerKey = await _storage.getProviderApiKey(providerId);
       final reply = await _api.sendMessage(
         history: _messages.sublist(0, _messages.length - 1),
         userMessage: text,
         model: _selectedModel,
+        providerId: providerId,
+        providerApiKey: providerKey,
       );
 
       final aiMsg = ChatMessage(
@@ -445,6 +454,11 @@ class _ChatScreenState extends State<ChatScreen> {
             ],
           ),
           actions: [
+            IconButton(
+              icon: const Icon(Icons.hub_outlined, color: Colors.white70),
+              tooltip: 'اتصال سرویس‌های هوش مصنوعی',
+              onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ProviderConnectionsScreen())),
+            ),
             IconButton(icon: const Icon(Icons.tune, color: Colors.white70), tooltip: 'انتخاب مدل', onPressed: _chooseModel),
             IconButton(
               icon: const Icon(Icons.more_vert, color: Colors.white70),
