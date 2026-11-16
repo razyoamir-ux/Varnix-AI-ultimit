@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'owner_content_manager_screen.dart';
 
 class OwnerPanelScreen extends StatefulWidget {
   const OwnerPanelScreen({super.key});
@@ -20,7 +21,7 @@ class _OwnerPanelScreenState extends State<OwnerPanelScreen> with SingleTickerPr
   static const boolKeys={'payment_enabled','ads_enabled','ad_banner_enabled','ad_interstitial_enabled','ad_rewarded_enabled'};
   static const intKeys={'pro_duration_days','pro_base_price','free_daily_message_limit','free_daily_image_limit','free_daily_file_limit','free_daily_video_limit','free_voice_economic_minutes','free_voice_advanced_minutes','pro_daily_image_generation_limit','pro_daily_video_generation_limit','pro_daily_image_input_limit','pro_daily_file_input_limit','free_max_attachment_mb','pro_max_attachment_mb'};
   static const keys=['app_name','default_model','api_base_url','system_prompt','rubika_url','myket_url','pro_price','pro_duration_days','announcement','payment_provider','payment_enabled','pro_base_price','free_daily_message_limit','free_daily_image_limit','free_daily_file_limit','free_daily_video_limit','free_voice_economic_minutes','free_voice_advanced_minutes','pro_daily_image_generation_limit','pro_daily_video_generation_limit','ads_enabled','ad_provider','ad_banner_enabled','ad_banner_placement','ad_banner_unit_id','ad_interstitial_enabled','ad_interstitial_unit_id','ad_rewarded_enabled','ad_rewarded_unit_id','pro_daily_image_input_limit','pro_daily_file_input_limit','free_max_attachment_mb','pro_max_attachment_mb'];
-  @override void initState(){super.initState();tabs=TabController(length:8,vsync:this);authorize();}
+  @override void initState(){super.initState();tabs=TabController(length:9,vsync:this);authorize();}
   String err(Object e)=>e.toString().replaceFirst('Exception: ','');
   Future<void> authorize() async {
     try{
@@ -205,8 +206,8 @@ class _OwnerPanelScreenState extends State<OwnerPanelScreen> with SingleTickerPr
   @override Widget build(BuildContext context){
     if(checking)return const Scaffold(body:Center(child:CircularProgressIndicator()));
     if(!allowed)return Scaffold(appBar:AppBar(title:const Text('پنل مالک')),body:Center(child:Text(errorText??'دسترسی مجاز نیست.')));
-    final pages=[overview(),settingsPage(),usersPage(),modelsPage(),assistantsPage(),plansPage(),purchasesPage(),providerKeysPage()];
-    return Directionality(textDirection:TextDirection.rtl,child:Scaffold(backgroundColor:const Color(0xFF0F0F1A),appBar:AppBar(title:const Text('پنل مدیریت وارنیکس'),actions:[IconButton(onPressed:busy?null:reload,icon:const Icon(Icons.refresh))],bottom:TabBar(controller:tabs,isScrollable:true,indicatorColor:purple,tabs:const [Tab(text:'نمای کلی'),Tab(text:'تنظیمات'),Tab(text:'کاربران'),Tab(text:'مدل‌ها'),Tab(text:'دستیارها'),Tab(text:'پلن‌ها'),Tab(text:'خریدها'),Tab(text:'کلیدهای API')])),body:Stack(children:[TabBarView(controller:tabs,children:pages),if(busy)const Align(alignment:Alignment.topCenter,child:LinearProgressIndicator())])));
+    final pages=[overview(),settingsPage(),usersPage(),modelsPage(),assistantsPage(),plansPage(),purchasesPage(),providerKeysPage(),const OwnerContentManagerScreen()];
+    return Directionality(textDirection:TextDirection.rtl,child:Scaffold(backgroundColor:const Color(0xFF0F0F1A),appBar:AppBar(title:const Text('پنل مدیریت وارنیکس'),actions:[IconButton(onPressed:busy?null:reload,icon:const Icon(Icons.refresh))],bottom:TabBar(controller:tabs,isScrollable:true,indicatorColor:purple,tabs:const [Tab(text:'نمای کلی'),Tab(text:'تنظیمات'),Tab(text:'کاربران'),Tab(text:'مدل‌ها'),Tab(text:'دستیارها'),Tab(text:'پلن‌ها'),Tab(text:'خریدها'),Tab(text:'کلیدهای API'),Tab(text:'محتوای آنلاین')])),body:Stack(children:[TabBarView(controller:tabs,children:pages),if(busy)const Align(alignment:Alignment.topCenter,child:LinearProgressIndicator())])));
   }
   @override void dispose(){tabs.dispose();for(final c in fields.values){c.dispose();}super.dispose();}
 }
