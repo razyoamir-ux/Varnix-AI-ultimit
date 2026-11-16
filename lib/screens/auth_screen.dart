@@ -146,7 +146,7 @@ class _AuthScreenState extends State<AuthScreen> {
                       ),
                     ),
                   ],
-                  CheckboxListTile(value: _acceptedTerms, activeColor: const Color(0xFF8B5CF6), controlAffinity: ListTileControlAffinity.leading, onChanged: _busy ? null : (v) => setState(() => _acceptedTerms = v == true), title: const Text('تمام شرایط و قوانین را می‌پذیرم.', style: TextStyle(color: Colors.white, fontSize: 13)), subtitle: TextButton(onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const VarnixInfoScreen(section: 'terms'))), child: const Text('مطالعه شرایط و قوانین')),
+                  CheckboxListTile(value: _acceptedTerms, activeColor: const Color(0xFF8B5CF6), controlAffinity: ListTileControlAffinity.leading, onChanged: _busy ? null : (v) => setState(() => _acceptedTerms = v == true), title: const Text('تمام شرایط و قوانین را می‌پذیرم.', style: TextStyle(color: Colors.white, fontSize: 13)), subtitle: TextButton(onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const VarnixInfoScreen(section: 'terms'))), child: const Text('مطالعه شرایط و قوانین'))),
                   if (_message.isNotEmpty)
                     Padding(
                       padding: const EdgeInsets.only(top: 14),
