@@ -9,6 +9,7 @@ on:
       - feat/cloud-sync-and-owner-api-keys
       - feat/multipage-navigation-referrals
       - feat/permission-onboarding-file-access
+      - feat/varnix-content-terms-updates
   pull_request:
     branches:
       - main
