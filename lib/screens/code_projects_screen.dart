@@ -137,14 +137,7 @@ class _CodeProjectsScreenState extends State<CodeProjectsScreen> {
                         PopupMenuItem(value: 'delete', child: Text('حذف پروژه')),
                       ],
                     ),
-                    onTap: () => showDialog<void>(
-                      context: context,
-                      builder: (ctx) => AlertDialog(
-                        title: Text(p['name']?.toString() ?? 'کد پروژه'),
-                        content: SingleChildScrollView(child: SelectableText(p['code']?.toString() ?? '')),
-                        actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('بستن'))],
-                      ),
-                    ),
+                    onTap: () => Navigator.pop(context, p),
                   ),
                 );
               },
