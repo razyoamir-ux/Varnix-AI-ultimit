@@ -71,6 +71,19 @@ class _CodeLabScreenState extends State<CodeLabScreen> {
         : 'برای Java فعلاً دستور Maven را از صفحه کتابخانه‌ها کپی کن؛ نصب مستقیم Maven هنوز فعال نیست.');
   }
 
+  Future<void> _openSavedProject() async {
+    final result = await Navigator.push<Map<String, dynamic>>(
+      context,
+      MaterialPageRoute(builder: (_) => const CodeProjectsScreen()),
+    );
+    if (result == null || !mounted) return;
+    setState(() {
+      _language = result['language']?.toString() == 'java' ? 'java' : 'python';
+      _code.text = result['code']?.toString() ?? '';
+      _output = 'پروژه «${result['name'] ?? ''}» در ویرایشگر باز شد.';
+    });
+  }
+
   Future<void> _saveProject() async {
     final nameController = TextEditingController(text: 'پروژه من');
     final name = await showDialog<String>(
@@ -168,7 +181,7 @@ class _CodeLabScreenState extends State<CodeLabScreen> {
             const SizedBox(height: 10),
             Wrap(spacing: 8, runSpacing: 8, children: [
               OutlinedButton.icon(onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PackageLibraryScreen())), icon: const Icon(Icons.library_books), label: const Text('مرور کتابخانه‌ها')),
-              OutlinedButton.icon(onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CodeProjectsScreen())), icon: const Icon(Icons.folder_open), label: const Text('پروژه‌های من')),
+              OutlinedButton.icon(onPressed: _openSavedProject, icon: const Icon(Icons.folder_open), label: const Text('پروژه‌های من')),
               OutlinedButton.icon(onPressed: _saveProject, icon: const Icon(Icons.save), label: const Text('ذخیره پروژه')),
             ]),
             const SizedBox(height: 14),
