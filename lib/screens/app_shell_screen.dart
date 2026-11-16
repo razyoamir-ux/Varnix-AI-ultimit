@@ -25,10 +25,12 @@ class _AppShellScreenState extends State<AppShellScreen> {
   Widget build(BuildContext context) {
     final pages = <Widget>[
       _HomePage(onOpen: _go),
-      const ChatScreen(),
       _ToolsPage(onOpen: _go),
-      const ReferralPage(),
-      _AccountPage(onOwner: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const OwnerPanelScreen())), onLogout: () async {
+      const _PlansPage(),
+      _AccountPage(
+        onReferral: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ReferralPage())),
+        onOwner: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const OwnerPanelScreen())),
+        onLogout: () async {
         await Supabase.instance.client.auth.signOut();
         if (!mounted) return;
         Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder: (_) => const AuthScreen()), (_) => false);
@@ -83,10 +85,10 @@ class _HomePage extends StatelessWidget {
         crossAxisCount: 2, shrinkWrap: true, physics: const NeverScrollableScrollPhysics(),
         crossAxisSpacing: 12, mainAxisSpacing: 12, childAspectRatio: 1.55,
         children: [
-          _QuickTile(icon: Icons.chat, title: 'گفتگوی هوشمند', onTap: () => onOpen(1)),
-          _QuickTile(icon: Icons.auto_awesome, title: 'ابزارهای هوشمند', onTap: () => onOpen(2)),
-          _QuickTile(icon: Icons.card_giftcard, title: 'دعوت دوستان', onTap: () => onOpen(3)),
-          _QuickTile(icon: Icons.person, title: 'حساب کاربری', onTap: () => onOpen(4)),
+          _QuickTile(icon: Icons.chat, title: 'گفتگوی هوشمند', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ChatScreen()))),
+          _QuickTile(icon: Icons.auto_awesome, title: 'ابزارهای هوشمند', onTap: () => onOpen(1)),
+          _QuickTile(icon: Icons.workspace_premium, title: 'پلن‌ها و اشتراک', onTap: () => onOpen(2)),
+          _QuickTile(icon: Icons.person, title: 'حساب کاربری', onTap: () => onOpen(3)),
         ],
       ),
       const SizedBox(height: 16),
@@ -115,6 +117,8 @@ class _ToolsPage extends StatelessWidget {
   const _ToolsPage({required this.onOpen});
   @override
   Widget build(BuildContext context) => _PageFrame(title: 'ابزارهای هوشمند', subtitle: 'بخش‌های مختلف وارنیکس', child: Column(children: [
+    _ToolRow(icon: Icons.card_giftcard, title: 'دعوت دوستان', subtitle: 'کد دعوت اختصاصی و شمارش دعوت‌ها', status: 'رایگان', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ReferralPage()))),
+    _ToolRow(icon: Icons.workspace_premium_outlined, title: 'پلن‌ها و اشتراک', subtitle: 'مشاهده پلن فعلی و امکانات حرفه‌ای', status: 'پلن‌ها', onTap: () => onOpen(2)),
     _ToolRow(icon: Icons.smart_toy_outlined, title: 'دستیارهای هوشمند', subtitle: 'انتخاب و ساخت دستیارهای اختصاصی', status: 'در حال توسعه'),
     _ToolRow(icon: Icons.code, title: 'آزمایشگاه کدنویسی', subtitle: 'ویرایش، اجرا و مشاهده خروجی Python و Java', status: 'جدید', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CodeLabScreen()))),
     _ToolRow(icon: Icons.auto_fix_high, title: 'ابزارهای رایگان', subtitle: 'قالب‌های آماده، بررسی متن و یادداشت سریع', status: 'رایگان', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const FreeToolsScreen()))),
@@ -124,7 +128,7 @@ class _ToolsPage extends StatelessWidget {
     _ToolRow(icon: Icons.history, title: 'تاریخچه گفتگوها', subtitle: 'گفتگوهای ذخیره‌شده حساب', status: 'در گفتگو'),
     _ToolRow(icon: Icons.workspace_premium_outlined, title: 'اشتراک حرفه‌ای', subtitle: 'امکانات و شرایط نسخه حرفه‌ای', status: 'مشاهده از حساب'),
     const SizedBox(height: 12),
-    OutlinedButton.icon(onPressed: () => onOpen(1), icon: const Icon(Icons.chat), label: const Text('رفتن به گفتگوی هوشمند')),
+    OutlinedButton.icon(onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ChatScreen())), icon: const Icon(Icons.chat), label: const Text('رفتن به گفتگوی هوشمند')),
   ]));
 }
 
@@ -194,9 +198,138 @@ class ReferralPage extends StatelessWidget {
   }
 }
 
+
+class _PlansPage extends StatefulWidget {
+  const _PlansPage();
+  @override
+  State<_PlansPage> createState() => _PlansPageState();
+}
+
+class _PlansPageState extends State<_PlansPage> {
+  late final Future<List<dynamic>> _future;
+
+  @override
+  void initState() {
+    super.initState();
+    _future = _loadPlans();
+  }
+
+  Future<List<dynamic>> _loadPlans() async {
+    final client = Supabase.instance.client;
+    final user = client.auth.currentUser;
+    if (user == null) return [null, <dynamic>[]];
+    final profile = await client
+        .from('profiles')
+        .select('plan_code, plan_expires_at')
+        .eq('id', user.id)
+        .maybeSingle();
+    final plans = await client
+        .from('subscription_plans')
+        .select('plan_code, display_name, price_label, duration_days')
+        .eq('is_active', true)
+        .order('sort_order');
+    return [profile, plans];
+  }
+
+  @override
+  Widget build(BuildContext context) => _PageFrame(
+    title: 'پلن‌ها و اشتراک',
+    subtitle: 'وضعیت حساب و امکانات هر سطح',
+    child: FutureBuilder<List<dynamic>>(
+      future: _future,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: Padding(
+            padding: EdgeInsets.all(24),
+            child: CircularProgressIndicator(),
+          ));
+        }
+        if (snapshot.hasError) {
+          return const Text('دریافت اطلاعات پلن‌ها ناموفق بود. دوباره تلاش کن.',
+            style: TextStyle(color: Colors.white70));
+        }
+        final profile = snapshot.data?[0] as Map<String, dynamic>?;
+        final plans = (snapshot.data?[1] as List<dynamic>?) ?? <dynamic>[];
+        final current = profile?['plan_code']?.toString() ?? 'free';
+        final expiryRaw = profile?['plan_expires_at']?.toString();
+        final expiry = expiryRaw == null ? null : DateTime.tryParse(expiryRaw)?.toLocal();
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(18),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(colors: [Color(0xFF6D28D9), Color(0xFF4338CA)]),
+                borderRadius: BorderRadius.circular(18),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('پلن فعلی شما', style: TextStyle(color: Colors.white70)),
+                  const SizedBox(height: 8),
+                  Text(current.toLowerCase() == 'pro' ? 'حرفه‌ای' : 'رایگان',
+                    style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
+                  if (expiry != null) ...[
+                    const SizedBox(height: 6),
+                    Text('اعتبار تا: ${expiry.year}/${expiry.month}/${expiry.day}',
+                      style: const TextStyle(color: Colors.white70)),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(height: 18),
+            ...plans.map((item) {
+              final plan = item as Map<String, dynamic>;
+              final code = plan['plan_code']?.toString() ?? '';
+              final isCurrent = code == current;
+              return Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF211936),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: isCurrent ? const Color(0xFF8B5CF6) : Colors.white12),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(child: Text(plan['display_name']?.toString() ?? code,
+                          style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold))),
+                        if (isCurrent) const Chip(label: Text('پلن فعلی')),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Text(plan['price_label']?.toString() ?? 'قیمت نامشخص',
+                      style: const TextStyle(color: Color(0xFFA78BFA), fontSize: 17, fontWeight: FontWeight.bold)),
+                    Text('مدت: ${plan['duration_days'] ?? 30} روز',
+                      style: const TextStyle(color: Colors.white60)),
+                    if (code == 'pro') ...[
+                      const SizedBox(height: 10),
+                      const Text('فضای کاری حرفه‌ای و امکانات بیشتر هوش مصنوعی',
+                        style: TextStyle(color: Colors.white70)),
+                      const SizedBox(height: 10),
+                      const OutlinedButton(
+                        onPressed: null,
+                        child: Text('اتصال پرداخت در حال تکمیل است'),
+                      ),
+                    ],
+                  ],
+                ),
+              );
+            }),
+          ],
+        );
+      },
+    ),
+  );
+}
+
 class _AccountPage extends StatelessWidget {
-  final VoidCallback onOwner; final VoidCallback onLogout;
-  const _AccountPage({required this.onOwner, required this.onLogout});
+  final VoidCallback onOwner; final VoidCallback onLogout; final VoidCallback onReferral;
+  const _AccountPage({required this.onOwner, required this.onLogout, required this.onReferral});
   @override
   Widget build(BuildContext context) {
     final user = Supabase.instance.client.auth.currentUser;
@@ -205,7 +338,8 @@ class _AccountPage extends StatelessWidget {
       const SizedBox(height: 12),
       Text(user?.email ?? 'کاربر وارنیکس', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
       const SizedBox(height: 22),
-      _AccountTile(icon: Icons.workspace_premium, title: 'اشتراک حرفه‌ای', onTap: () => _showInfo(context, 'اشتراک حرفه‌ای', 'اطلاعات و خرید اشتراک از طریق بخش پرداخت برنامه در دسترس قرار می‌گیرد.')),
+      _AccountTile(icon: Icons.card_giftcard, title: 'کد دعوت دوستان', onTap: onReferral),
+      _AccountTile(icon: Icons.workspace_premium, title: 'پلن‌ها و اشتراک', onTap: () => _showInfo(context, 'پلن‌ها', 'جزئیات پلن‌ها از نوار پایین برنامه قابل مشاهده است.')),
       _AccountTile(icon: Icons.settings, title: 'تنظیمات برنامه', onTap: () => _showInfo(context, 'تنظیمات', 'تنظیمات مدل و اتصال API از منوی گفتگوی هوشمند قابل دسترسی است.')),
       _AccountTile(icon: Icons.admin_panel_settings, title: 'پنل مالک', onTap: onOwner),
       _AccountTile(icon: Icons.logout, title: 'خروج از حساب', color: Colors.orangeAccent, onTap: onLogout),
