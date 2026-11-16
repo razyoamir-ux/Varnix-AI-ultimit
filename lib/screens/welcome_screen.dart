@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'app_shell_screen.dart';
 
 class WelcomeScreen extends StatefulWidget {
@@ -28,6 +29,64 @@ class _WelcomeScreenState extends State<WelcomeScreen>
       CurvedAnimation(parent: _controller, curve: Curves.easeOutBack),
     );
     _controller.forward();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _showFirstRunPrivacyInfo());
+  }
+
+  Future<void> _showFirstRunPrivacyInfo() async {
+    final preferences = await SharedPreferences.getInstance();
+    if (!mounted || preferences.getBool('varnix_permission_intro_seen') == true) {
+      return;
+    }
+
+    final understood = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: AlertDialog(
+          backgroundColor: const Color(0xFF211936),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: const Row(
+            children: [
+              Icon(Icons.privacy_tip_outlined, color: Color(0xFFA78BFA)),
+              SizedBox(width: 10),
+              Expanded(
+                child: Text('دسترسی‌های وارنیکس',
+                    style: TextStyle(color: Colors.white, fontSize: 18)),
+              ),
+            ],
+          ),
+          content: const Text(
+            'وارنیکس برای جست‌وجوی آنلاین به اینترنت و برای انتخاب یا ذخیره فایل‌ها به دسترسی مربوط نیاز دارد.\n\n'
+            'اینترنت از قبل در برنامه فعال است. دسترسی فایل، عکس یا ویدئو فقط هنگام استفاده از همان قابلیت و از طریق پنجره امن اندروید درخواست می‌شود.\n\n'
+            'اگر اجازه ندهید، می‌توانید از بقیه بخش‌های برنامه استفاده کنید؛ فقط همان قابلیت محدود می‌شود. هیچ دسترسی غیرمرتبطی مثل مخاطبین یا موقعیت مکانی لازم نیست.',
+            style: TextStyle(color: Colors.white70, height: 1.65),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('بعداً'),
+            ),
+            FilledButton(
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFF7C3AED),
+                foregroundColor: Colors.white,
+              ),
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: const Text('متوجه شدم'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (!mounted) return;
+    await preferences.setBool('varnix_permission_intro_seen', true);
+    if (understood == true && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('هر دسترسی فقط هنگام نیاز درخواست می‌شود.')),
+      );
+    }
   }
 
   @override
