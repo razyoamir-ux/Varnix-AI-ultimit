@@ -39,6 +39,14 @@ jobs:
         run: flutter pub get
       - name: Analyze Project
         run: flutter analyze --no-fatal-infos
+      - name: Install Android SDK 36
+        run: |
+          set -euo pipefail
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36"
+      - name: Generate Gradle Wrapper 8.14.3
+        run: gradle -p android wrapper --gradle-version 8.14.3 --distribution-type bin
+      - name: Build Debug APK for Android verification
+        run: flutter build apk --debug
 
   release:
     if: github.event_name != 'pull_request'
@@ -79,6 +87,10 @@ jobs:
           printf '%s' "$KEYSTORE_BASE64" | base64 --decode > android/app/release-key.jks
           test -s android/app/release-key.jks
           keytool -list -keystore android/app/release-key.jks -storepass "$STORE_PASSWORD" >/dev/null
+      - name: Install Android SDK 36
+        run: |
+          set -euo pipefail
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36"
       - name: Generate Gradle Wrapper 8.14.3
         run: gradle -p android wrapper --gradle-version 8.14.3 --distribution-type bin
       - name: Build signed Release APK
