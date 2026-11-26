@@ -11,6 +11,7 @@ on:
       - feat/permission-onboarding-file-access
       - feat/varnix-content-terms-updates
       - feat/android9-apk-size-optimization
+      - feature/multipage-myket-billing
   pull_request:
     branches:
       - main
@@ -19,6 +20,7 @@ on:
       - feat/multipage-navigation-referrals
       - feat/permission-onboarding-file-access
       - feat/varnix-content-terms-updates
+      - feat/android9-apk-size-optimization
 
 permissions:
   contents: read
