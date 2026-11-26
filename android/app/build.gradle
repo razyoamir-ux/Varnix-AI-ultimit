@@ -56,7 +56,7 @@ android {
             marketBindAddress  : "${marketBindAddress}",
             marketPermission   : "${marketApplicationId}.BILLING"
         ]
-        buildConfigField "String", "MYKET_RSA_KEY", "\"\${myketRsaKey}\""
+        buildConfigField "String", "MYKET_RSA_KEY", '"' + myketRsaKey + '"'
     }
 
     buildFeatures {
