@@ -21,6 +21,7 @@ def releaseStorePassword = System.getenv('STORE_PASSWORD')
 def releaseKeyAlias = System.getenv('KEY_ALIAS')
 def releaseKeyPassword = System.getenv('KEY_PASSWORD')
 def releaseKeyFile = file(releaseStoreFile)
+def myketRsaKey = System.getenv('MYKET_RSA_KEY') ?: ''
 def hasReleaseKey = releaseStorePassword && releaseKeyAlias && releaseKeyPassword && releaseKeyFile.exists() && releaseKeyFile.length() > 0
 
 if (gradle.startParameter.taskNames.any { it.toLowerCase().contains('release') } && !hasReleaseKey) {
@@ -29,7 +30,9 @@ if (gradle.startParameter.taskNames.any { it.toLowerCase().contains('release') }
 
 android {
     namespace "com.varnix.ai.ultimateplus"
-    compileSdk 34
+    // Newer AndroidX dependencies in the project require API 36 at compile time.
+    // This does not raise minSdk or targetSdk, so Android 9+ compatibility remains.
+    compileSdk 36
     ndkVersion flutter.ndkVersion
 
     compileOptions {
@@ -47,6 +50,19 @@ android {
         targetSdk 34
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName
+
+        def marketApplicationId = "ir.mservices.market"
+        def marketBindAddress = "ir.mservices.market.InAppBillingService.BIND"
+        manifestPlaceholders += [
+            marketApplicationId: "${marketApplicationId}",
+            marketBindAddress  : "${marketBindAddress}",
+            marketPermission   : "${marketApplicationId}.BILLING"
+        ]
+        buildConfigField "String", "MYKET_RSA_KEY", '"' + myketRsaKey + '"'
+    }
+
+    buildFeatures {
+        buildConfig true
     }
 
     signingConfigs {
@@ -74,5 +90,5 @@ flutter {
 }
 
 dependencies {
-    implementation 'com.google.android.play:core:1.10.3'
+    implementation 'ir.myket:billing:2.2'
 }

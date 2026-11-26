@@ -39,6 +39,17 @@ jobs:
         run: flutter pub get
       - name: Analyze Project
         run: flutter analyze --no-fatal-infos
+      - name: Build debug APK (compile Android billing bridge)
+        env:
+          MYKET_RSA_KEY: ${{ secrets.MYKET_RSA_KEY }}
+        run: flutter build apk --debug
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: varnix-ai-debug-${{ github.run_number }}
+          path: build/app/outputs/flutter-apk/app-debug.apk
+          retention-days: 14
+          if-no-files-found: error
 
   release:
     if: github.event_name != 'pull_request'
@@ -70,12 +81,14 @@ jobs:
           STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          MYKET_RSA_KEY: ${{ secrets.MYKET_RSA_KEY }}
         run: |
           set -euo pipefail
           test -n "$KEYSTORE_BASE64" || { echo "Missing KEYSTORE_BASE64 secret"; exit 1; }
           test -n "$STORE_PASSWORD" || { echo "Missing STORE_PASSWORD secret"; exit 1; }
           test -n "$KEY_PASSWORD" || { echo "Missing KEY_PASSWORD secret"; exit 1; }
           test -n "$KEY_ALIAS" || { echo "Missing KEY_ALIAS secret"; exit 1; }
+          test -n "$MYKET_RSA_KEY" || { echo "Missing MYKET_RSA_KEY secret"; exit 1; }
           printf '%s' "$KEYSTORE_BASE64" | base64 --decode > android/app/release-key.jks
           test -s android/app/release-key.jks
           keytool -list -keystore android/app/release-key.jks -storepass "$STORE_PASSWORD" >/dev/null
@@ -87,6 +100,7 @@ jobs:
           STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          MYKET_RSA_KEY: ${{ secrets.MYKET_RSA_KEY }}
         run: flutter build apk --release
       - name: Verify APK signature
         run: |

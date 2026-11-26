@@ -9,6 +9,7 @@ import '../services/storage_service.dart';
 import '../widgets/message_bubble.dart';
 import '../widgets/typing_indicator.dart';
 import '../services/backend_service.dart';
+import '../services/myket_billing_service.dart';
 import 'auth_screen.dart';
 import 'provider_connections_screen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -45,6 +46,14 @@ class _ChatScreenState extends State<ChatScreen> {
     final history = await _storage.loadChatHistory();
     final remoteSettings = await BackendService.loadRemoteSettings(settings);
     var isPro = false;
+    var myketIsPro = false;
+    try {
+      await MyketBillingService.initialize();
+      myketIsPro = await MyketBillingService.isSubscriptionActive();
+    } catch (_) {
+      // The app remains usable without Myket billing (for example, during review
+      // or when the Myket Store app is not installed).
+    }
     try {
       final user = Supabase.instance.client.auth.currentUser;
       if (user != null) {
@@ -54,6 +63,7 @@ class _ChatScreenState extends State<ChatScreen> {
         isPro = plan == 'owner' || (plan == 'pro' && (expiry == null || DateTime.tryParse(expiry.toString())?.isAfter(DateTime.now()) == true));
       }
     } catch (_) {}
+    isPro = isPro || myketIsPro;
     List<Map<String, dynamic>> models = [];
     try {
       final rows = await Supabase.instance.client.from('ai_models').select('model_id,display_name,provider,requires_pro,is_active').eq('is_active', true).order('sort_order');
@@ -268,6 +278,67 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
+
+  Future<void> _buyProSubscription() async {
+    try {
+      await MyketBillingService.initialize();
+      final purchased = await MyketBillingService.purchaseSubscription();
+      if (!purchased) {
+        throw Exception('خرید اشتراک توسط مایکت تأیید نشد.');
+      }
+      final active = await MyketBillingService.isSubscriptionActive();
+      if (!active) {
+        throw Exception('اشتراک هنوز در مایکت فعال تشخیص داده نشده است.');
+      }
+      if (!mounted) return;
+      setState(() => _isPro = true);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('اشتراک حرفه‌ای وارنیکس فعال شد.'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } on PlatformException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.message ?? 'پرداخت مایکت ناموفق بود.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.toString().replaceFirst('Exception: ', '')),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  Future<void> _restoreProSubscription() async {
+    try {
+      await MyketBillingService.initialize();
+      final active = await MyketBillingService.isSubscriptionActive();
+      if (!mounted) return;
+      if (active) setState(() => _isPro = true);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(active
+              ? 'اشتراک فعال شما بازیابی شد.'
+              : 'اشتراک فعالی برای این حساب مایکت پیدا نشد.'),
+          backgroundColor: active ? Colors.green : Colors.orange,
+        ),
+      );
+    } on PlatformException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.message ?? 'بازیابی اشتراک ناموفق بود.')),
+      );
+    }
+  }
+
   void _showMenu() {
     showModalBottomSheet(
       context: context,
@@ -304,17 +375,23 @@ class _ChatScreenState extends State<ChatScreen> {
                   },
                 ),
                 ListTile(
-                  leading: const Icon(Icons.payment, color: Color(0xFFA78BFA)),
+                  leading: const Icon(Icons.workspace_premium, color: Color(0xFFFFD166)),
                   title: Text(
-                    'پرداخت (${_settings.paymentAmount})',
+                    _isPro ? 'اشتراک حرفه‌ای فعال است' : 'خرید اشتراک حرفه‌ای ۳۰ روزه',
                     style: const TextStyle(color: Colors.white),
                   ),
+                  subtitle: const Text('پرداخت امن از طریق مایکت', style: TextStyle(color: Colors.white54)),
                   onTap: () {
                     Navigator.pop(ctx);
-                    _openLink(
-                      _settings.paymentLink,
-                      'لینک پرداخت تنظیم نشده است.',
-                    );
+                    _buyProSubscription();
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.restore, color: Color(0xFFA78BFA)),
+                  title: const Text('بازیابی اشتراک مایکت', style: TextStyle(color: Colors.white)),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _restoreProSubscription();
                   },
                 ),
                 ListTile(
