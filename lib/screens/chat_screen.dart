@@ -322,7 +322,7 @@ class _ChatScreenState extends State<ChatScreen> {
       await MyketBillingService.initialize();
       final active = await MyketBillingService.isSubscriptionActive();
       if (!mounted) return;
-      setState(() => _isPro = active);
+      if (active) setState(() => _isPro = true);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(active
