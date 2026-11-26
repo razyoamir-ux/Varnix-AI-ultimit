@@ -59,7 +59,11 @@ android {
         buildConfigField "String", "MYKET_RSA_KEY", "\"\${myketRsaKey}\""
     }
 
-    buildFeatures {\n        buildConfig true\n    }\n\n    signingConfigs {
+    buildFeatures {
+        buildConfig true
+    }
+
+    signingConfigs {
         release {
             if (hasReleaseKey) {
                 storeFile releaseKeyFile
