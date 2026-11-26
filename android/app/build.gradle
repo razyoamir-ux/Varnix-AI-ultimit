@@ -21,7 +21,7 @@ def releaseStorePassword = System.getenv('STORE_PASSWORD')
 def releaseKeyAlias = System.getenv('KEY_ALIAS')
 def releaseKeyPassword = System.getenv('KEY_PASSWORD')
 def releaseKeyFile = file(releaseStoreFile)
-def myketRsaKey = (System.getenv('MYKET_RSA_KEY') ?: '').replace('\\\\', '\\\\\\\\').replace('\"', '\\\"')
+def myketRsaKey = System.getenv('MYKET_RSA_KEY') ?: ''
 def hasReleaseKey = releaseStorePassword && releaseKeyAlias && releaseKeyPassword && releaseKeyFile.exists() && releaseKeyFile.length() > 0
 
 if (gradle.startParameter.taskNames.any { it.toLowerCase().contains('release') } && !hasReleaseKey) {
