@@ -22,6 +22,7 @@ def releaseKeyAlias = System.getenv('KEY_ALIAS')
 def releaseKeyPassword = System.getenv('KEY_PASSWORD')
 def releaseKeyFile = file(releaseStoreFile)
 def hasReleaseKey = releaseStorePassword && releaseKeyAlias && releaseKeyPassword && releaseKeyFile.exists() && releaseKeyFile.length() > 0
+def myketRsaKey = System.getenv('MYKET_RSA_KEY') ?: ''
 
 if (gradle.startParameter.taskNames.any { it.toLowerCase().contains('release') } && !hasReleaseKey) {
     throw new GradleException('Release build blocked: provide a valid release keystore and KEYSTORE_PATH, STORE_PASSWORD, KEY_ALIAS, KEY_PASSWORD. Debug signing is never used for release builds.')
@@ -49,6 +50,15 @@ android {
         targetSdk 34
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName
+
+        def marketApplicationId = "ir.mservices.market"
+        def marketBindAddress = "ir.mservices.market.InAppBillingService.BIND"
+        manifestPlaceholders += [
+            marketApplicationId: "${marketApplicationId}",
+            marketBindAddress  : "${marketBindAddress}",
+            marketPermission   : "${marketApplicationId}.BILLING"
+        ]
+        buildConfigField "String", "MYKET_RSA_KEY", '"' + myketRsaKey + '"'
     }
 
     signingConfigs {
@@ -60,6 +70,10 @@ android {
                 keyPassword releaseKeyPassword
             }
         }
+    }
+
+    buildFeatures {
+        buildConfig true
     }
 
     buildTypes {
@@ -78,5 +92,5 @@ flutter {
 }
 
 dependencies {
-    implementation 'com.google.android.play:core:1.10.3'
+    implementation 'ir.myket:billing:2.2'
 }
