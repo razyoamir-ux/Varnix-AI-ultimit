@@ -43,6 +43,13 @@ jobs:
         env:
           MYKET_RSA_KEY: ${{ secrets.MYKET_RSA_KEY }}
         run: flutter build apk --debug
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: varnix-ai-debug-${{ github.run_number }}
+          path: build/app/outputs/flutter-apk/app-debug.apk
+          retention-days: 14
+          if-no-files-found: error
 
   release:
     if: github.event_name != 'pull_request'
