@@ -63,7 +63,6 @@ class _ChatScreenState extends State<ChatScreen> {
     }
     final remoteSettings = await BackendService.loadRemoteSettings(settings);
     var isPro = false;
-    var myketIsPro = false;
     try {
       await MyketBillingService.initialize();
       await MyketBillingService.isSubscriptionActive();
@@ -81,7 +80,6 @@ class _ChatScreenState extends State<ChatScreen> {
         isPro = isAdmin || plan == 'owner' || (plan == 'pro' && (expiry == null || DateTime.tryParse(expiry.toString())?.isAfter(DateTime.now()) == true));
       }
     } catch (_) {}
-    isPro = isPro || myketIsPro;
     List<Map<String, dynamic>> models = [];
     try {
       final rows = await Supabase.instance.client.from('ai_models').select('model_id,display_name,provider,requires_pro,is_active').eq('is_active', true).order('sort_order');
