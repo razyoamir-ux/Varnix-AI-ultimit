@@ -15,10 +15,13 @@ class _AuthScreenState extends State<AuthScreen> {
   final _email = TextEditingController();
   final _password = TextEditingController();
   final _inviteCode = TextEditingController();
+  static const String _authRedirect = 'com.varnix.ai.ultimateplus://login-callback/';
   bool _acceptedTerms = false;
   bool _register = false;
   bool _busy = false;
   bool _hidePassword = true;
+  bool _awaitingConfirmation = false;
+  bool _resending = false;
   String _message = '';
 
   Future<void> _submit() async {
@@ -41,11 +44,11 @@ class _AuthScreenState extends State<AuthScreen> {
           email: email,
           password: password,
           data: _inviteCode.text.trim().isEmpty ? null : {'referral_code': _inviteCode.text.trim().toUpperCase()},
-          emailRedirectTo: 'com.varnix.ai.ultimateplus://login-callback/',
+          emailRedirectTo: _authRedirect,
         );
         if (!mounted) return;
         if (result.session == null) {
-          setState(() => _message = 'حساب ساخته شد. ایمیلت را باز کن و روی لینک تأیید بزن؛ بعد از تأیید به وارنیکس برمی‌گردی.');
+          setState(() { _awaitingConfirmation = true; _message = ''; });
           return;
         }
         // Never grant app access from the sign-up action itself.
@@ -76,6 +79,92 @@ class _AuthScreenState extends State<AuthScreen> {
     } finally {
       if (mounted) setState(() => _busy = false);
     }
+  }
+
+  Future<void> _resendConfirmation() async {
+    final email = _email.text.trim();
+    if (email.isEmpty) return;
+    setState(() { _resending = true; _message = ''; });
+    try {
+      await Supabase.instance.client.auth.resend(
+        type: OtpType.signup,
+        email: email,
+        emailRedirectTo: _authRedirect,
+      );
+      if (mounted) setState(() => _message = 'ایمیل تأیید دوباره ارسال شد. صندوق ورودی و پوشه هرزنامه را بررسی کن.');
+    } on AuthException catch (e) {
+      if (mounted) setState(() => _message = e.message);
+    } catch (_) {
+      if (mounted) setState(() => _message = 'ارسال دوباره ایمیل انجام نشد. کمی بعد تلاش کن.');
+    } finally {
+      if (mounted) setState(() => _resending = false);
+    }
+  }
+
+  Widget _confirmationCard() {
+    const purple = Color(0xFF8B5CF6);
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(22),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(26),
+        gradient: const LinearGradient(
+          begin: Alignment.topRight,
+          end: Alignment.bottomLeft,
+          colors: [Color(0xFF28204B), Color(0xFF17172B)],
+        ),
+        border: Border.all(color: purple.withValues(alpha: 0.45)),
+        boxShadow: const [BoxShadow(color: Color(0x332A1A58), blurRadius: 28, offset: Offset(0, 12))],
+      ),
+      child: Column(
+        children: [
+          Container(
+            width: 76,
+            height: 76,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: purple.withValues(alpha: 0.16),
+              border: Border.all(color: purple.withValues(alpha: 0.55)),
+            ),
+            child: const Icon(Icons.mark_email_read_rounded, color: Color(0xFFC4B5FD), size: 38),
+          ),
+          const SizedBox(height: 18),
+          const Text('فقط یک قدم تا وارنیکس!', textAlign: TextAlign.center,
+            style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 10),
+          const Text('لینک فعال‌سازی حساب را برای این ایمیل فرستادیم:',
+            textAlign: TextAlign.center, style: TextStyle(color: Colors.white70, height: 1.7)),
+          const SizedBox(height: 10),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 13),
+            decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.07), borderRadius: BorderRadius.circular(14)),
+            child: SelectableText(_email.text.trim(), textAlign: TextAlign.center,
+              style: const TextStyle(color: Color(0xFFD8CCFF), fontWeight: FontWeight.w600)),
+          ),
+          const SizedBox(height: 16),
+          const Text('۱. ایمیلت را باز کن.\n۲. پوشه هرزنامه را هم بررسی کن.\n۳. روی دکمه تأیید ایمیل بزن؛ وارنیکس پس از تأیید باز می‌شود.',
+            textAlign: TextAlign.right, style: TextStyle(color: Colors.white70, height: 1.9)),
+          const SizedBox(height: 20),
+          SizedBox(
+            width: double.infinity,
+            height: 50,
+            child: FilledButton.icon(
+              onPressed: _resending ? null : _resendConfirmation,
+              icon: _resending
+                  ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                  : const Icon(Icons.refresh_rounded),
+              label: Text(_resending ? 'در حال ارسال...' : 'ارسال دوباره ایمیل تأیید'),
+            ),
+          ),
+          if (_message.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Text(_message, textAlign: TextAlign.center,
+              style: const TextStyle(color: Color(0xFFC4B5FD), height: 1.6)),
+          ],
+        ],
+      ),
+    );
   }
 
   @override
@@ -112,8 +201,20 @@ class _AuthScreenState extends State<AuthScreen> {
                   const SizedBox(height: 22),
                   const Text('Varnix AI', style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold, color: Colors.white)),
                   const SizedBox(height: 8),
-                  Text(_register ? 'ساخت حساب کاربری' : 'ورود به حساب وارنیکس', style: const TextStyle(color: Colors.white70)),
+                  Text(_awaitingConfirmation ? 'تأیید ایمیل' : (_register ? 'ساخت حساب کاربری' : 'ورود به حساب وارنیکس'), style: const TextStyle(color: Colors.white70)),
                   const SizedBox(height: 28),
+                  if (_awaitingConfirmation) ...[
+                    _confirmationCard(),
+                    const SizedBox(height: 16),
+                    TextButton(
+                      onPressed: _busy ? null : () => setState(() {
+                        _awaitingConfirmation = false;
+                        _register = false;
+                        _message = '';
+                      }),
+                      child: const Text('بازگشت به صفحه ورود'),
+                    ),
+                  ] else ...[
                   TextField(
                     controller: _email,
                     keyboardType: TextInputType.emailAddress,
@@ -165,6 +266,7 @@ class _AuthScreenState extends State<AuthScreen> {
                     onPressed: _busy ? null : () => setState(() { _register = !_register; _message = ''; }),
                     child: Text(_register ? 'از قبل حساب داری؟ وارد شو' : 'حساب نداری؟ ثبت‌نام کن'),
                   ),
+                  ],
                   const SizedBox(height: 8),
                   const Text('حساب کاربری و تنظیمات به سرور امن وارنیکس متصل می‌شوند.', textAlign: TextAlign.center, style: TextStyle(color: Colors.white38, fontSize: 12)),
                 ],
