@@ -5,7 +5,6 @@ import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 import ir.myket.billingclient.IabHelper
 import ir.myket.billingclient.util.IabResult
-import java.util.UUID
 
 class MainActivity : FlutterActivity() {
     private val channelName = "com.varnix.ai.ultimateplus/myket"
@@ -20,7 +19,10 @@ class MainActivity : FlutterActivity() {
                 when (call.method) {
                     "initialize" -> initializeBilling(result)
                     "querySubscription" -> querySubscription(result)
-                    "purchaseSubscription" -> purchaseSubscription(result)
+                    "purchaseSubscription" -> {
+                        val payload = call.argument<String>("developerPayload").orEmpty()
+                        purchaseSubscription(payload, result)
+                    }
                     "dispose" -> {
                         billingHelper?.dispose()
                         billingHelper = null
@@ -61,6 +63,17 @@ class MainActivity : FlutterActivity() {
         }
     }
 
+    private fun purchaseReceipt(purchase: ir.myket.billingclient.util.Purchase): Map<String, Any?> =
+        mapOf(
+            "active" to (purchase.getPurchaseState() == 0),
+            "sku" to purchase.getSku(),
+            "orderId" to purchase.getOrderId(),
+            "purchaseTime" to purchase.getPurchaseTime(),
+            "originalJson" to purchase.getOriginalJson(),
+            "signature" to purchase.getSignature(),
+            "purchaseToken" to purchase.getToken()
+        )
+
     private fun querySubscription(result: MethodChannel.Result) {
         val helper = billingHelper
         if (helper == null) {
@@ -73,26 +86,24 @@ class MainActivity : FlutterActivity() {
                 return@queryInventoryAsync
             }
             val purchase = inventory.getPurchase(subscriptionSku)
-            val active = purchase != null && purchase.getPurchaseState() == 0
-            result.success(
-                mapOf(
-                    "active" to active,
-                    "sku" to subscriptionSku,
-                    "orderId" to purchase?.getOrderId(),
-                    "purchaseTime" to purchase?.getPurchaseTime()
-                )
-            )
+            if (purchase == null || purchase.getPurchaseState() != 0) {
+                result.success(mapOf("active" to false, "sku" to subscriptionSku))
+                return@queryInventoryAsync
+            }
+            result.success(purchaseReceipt(purchase))
         }
     }
 
-    private fun purchaseSubscription(result: MethodChannel.Result) {
+    private fun purchaseSubscription(payload: String, result: MethodChannel.Result) {
         val helper = billingHelper
         if (helper == null) {
             result.error("BILLING_NOT_READY", "اتصال مایکت آماده نیست.", null)
             return
         }
-        val payload = UUID.randomUUID().toString()
-        // Use Myket's dedicated subscription API rather than the generic item flow.
+        if (payload.isBlank() || payload.length > 128) {
+            result.error("INVALID_PURCHASE_PAYLOAD", "شناسه امن خرید معتبر نیست.", null)
+            return
+        }
         helper.launchSubscriptionPurchaseFlow(
             this,
             subscriptionSku,
@@ -105,17 +116,10 @@ class MainActivity : FlutterActivity() {
                     purchase.getPurchaseState() == 0 &&
                     purchase.getDeveloperPayload() == payload
                 if (!valid) {
-                    result.error("PURCHASE_INVALID", "تأیید خرید اشتراک ناموفق بود.", null)
+                    result.error("PURCHASE_INVALID", "تأیید اولیه خرید اشتراک ناموفق بود.", null)
                     return@launchSubscriptionPurchaseFlow
                 }
-                result.success(
-                    mapOf(
-                        "active" to true,
-                        "sku" to purchase.getSku(),
-                        "orderId" to purchase.getOrderId(),
-                        "purchaseTime" to purchase.getPurchaseTime()
-                    )
-                )
+                result.success(purchaseReceipt(purchase))
             },
             payload
         )
