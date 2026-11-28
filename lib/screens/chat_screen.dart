@@ -66,7 +66,7 @@ class _ChatScreenState extends State<ChatScreen> {
     var myketIsPro = false;
     try {
       await MyketBillingService.initialize();
-      myketIsPro = await MyketBillingService.isSubscriptionActive();
+      await MyketBillingService.isSubscriptionActive();
     } catch (_) {
       // Keep the app usable if Myket is temporarily unavailable.
     }
