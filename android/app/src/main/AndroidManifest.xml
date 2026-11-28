@@ -32,6 +32,13 @@
                 <category android:name="android.intent.category.BROWSABLE"/>
                 <data android:scheme="com.varnix.ai.ultimateplus" android:host="login-callback"/>
             </intent-filter>
+            <!-- Backward compatibility for confirmation links sent by older Varnix builds. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="com.varnix.ai" android:host="login-callback"/>
+            </intent-filter>
         </activity>
         <meta-data
             android:name="flutterEmbedding"

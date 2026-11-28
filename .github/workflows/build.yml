@@ -11,6 +11,7 @@ on:
       - feat/permission-onboarding-file-access
       - feat/varnix-content-terms-updates
       - feat/android9-apk-size-optimization
+      - feature/multipage-myket-billing
   pull_request:
     branches:
       - main
@@ -19,6 +20,7 @@ on:
       - feat/multipage-navigation-referrals
       - feat/permission-onboarding-file-access
       - feat/varnix-content-terms-updates
+      - feat/android9-apk-size-optimization
 
 permissions:
   contents: read
@@ -55,6 +57,8 @@ jobs:
       - name: Generate Gradle Wrapper 8.14.3
         run: gradle -p android wrapper --gradle-version 8.14.3 --distribution-type bin
       - name: Build Debug APK for Android verification
+        env:
+          MYKET_RSA_KEY: ${{ secrets.MYKET_RSA_KEY }}
         run: flutter build apk --debug
       - name: Upload Debug APK for device testing
         uses: actions/upload-artifact@v4
@@ -94,8 +98,10 @@ jobs:
           STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          MYKET_RSA_KEY: ${{ secrets.MYKET_RSA_KEY }}
         run: |
           set -euo pipefail
+          test -n "$MYKET_RSA_KEY" || { echo "Missing MYKET_RSA_KEY secret"; exit 1; }
           test -n "$KEYSTORE_BASE64" || { echo "Missing KEYSTORE_BASE64 secret"; exit 1; }
           test -n "$STORE_PASSWORD" || { echo "Missing STORE_PASSWORD secret"; exit 1; }
           test -n "$KEY_PASSWORD" || { echo "Missing KEY_PASSWORD secret"; exit 1; }
@@ -115,6 +121,7 @@ jobs:
           STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          MYKET_RSA_KEY: ${{ secrets.MYKET_RSA_KEY }}
         run: |
           set -euo pipefail
           mkdir -p dist

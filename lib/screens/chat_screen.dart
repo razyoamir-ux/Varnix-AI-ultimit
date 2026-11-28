@@ -9,6 +9,7 @@ import '../services/storage_service.dart';
 import '../widgets/message_bubble.dart';
 import '../widgets/typing_indicator.dart';
 import '../services/backend_service.dart';
+import '../services/myket_billing_service.dart';
 import '../services/cloud_chat_service.dart';
 import 'auth_screen.dart';
 import 'owner_panel_screen.dart';
@@ -62,6 +63,12 @@ class _ChatScreenState extends State<ChatScreen> {
     }
     final remoteSettings = await BackendService.loadRemoteSettings(settings);
     var isPro = false;
+    try {
+      await MyketBillingService.initialize();
+      await MyketBillingService.isSubscriptionActive();
+    } catch (_) {
+      // Keep the app usable if Myket is temporarily unavailable.
+    }
     var isAdmin = false;
     try {
       final user = Supabase.instance.client.auth.currentUser;
@@ -286,6 +293,51 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
+  Future<void> _buyMyketSubscription() async {
+    try {
+      await MyketBillingService.initialize();
+      final purchased = await MyketBillingService.purchaseSubscription();
+      if (!mounted) return;
+      if (purchased) {
+        await _loadData();
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('اشتراک وارنیکس پرو فعال شد.')),
+        );
+      }
+    } on PlatformException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.message ?? 'پرداخت مایکت ناموفق بود.')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('خطا در اتصال به مایکت: $e')),
+      );
+    }
+  }
+
+  Future<void> _restoreMyketSubscription() async {
+    try {
+      await MyketBillingService.initialize();
+      final active = await MyketBillingService.isSubscriptionActive();
+      if (!mounted) return;
+      if (active) {
+        await _loadData();
+      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(active ? 'اشتراک فعال بازیابی شد.' : 'اشتراک فعالی برای این حساب مایکت پیدا نشد.')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('بازیابی خرید ناموفق بود: $e')),
+      );
+    }
+  }
+
   void _showMenu() {
     showModalBottomSheet(
       context: context,
@@ -310,6 +362,22 @@ class _ChatScreenState extends State<ChatScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
+                ListTile(
+                  leading: const Icon(Icons.workspace_premium, color: Color(0xFFFFD166)),
+                  title: const Text('خرید اشتراک ۳۰ روزه وارنیکس پرو', style: TextStyle(color: Colors.white)),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _buyMyketSubscription();
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.restore, color: Color(0xFFA78BFA)),
+                  title: const Text('بازیابی اشتراک مایکت', style: TextStyle(color: Colors.white)),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _restoreMyketSubscription();
+                  },
+                ),
                 ListTile(
                   leading: const Icon(Icons.campaign, color: Color(0xFFA78BFA)),
                   title: const Text('کانال ما', style: TextStyle(color: Colors.white)),

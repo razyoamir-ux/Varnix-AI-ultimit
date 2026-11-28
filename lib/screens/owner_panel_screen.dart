@@ -123,7 +123,8 @@ class _OwnerPanelScreenState extends State<OwnerPanelScreen> with SingleTickerPr
     final price=int.tryParse((row['pro_price']??'').toString().replaceAll(RegExp(r'[^0-9]'),''));
     if(price==null||price<1000){toast('قیمت حرفه‌ای باید حداقل ۱۰۰۰ تومان باشد.',true);return;}
     if(!models.any((m)=>m['model_id']==row['default_model'] && m['is_active']==true)){toast('مدل پیش‌فرض باید در فهرست مدل‌ها موجود و فعال باشد.',true);return;}
-    if(row['payment_enabled']==true && row['payment_provider'].toString().toLowerCase()!='nextpay'){toast('در نسخه فعلی فقط نکست‌پی در Edge Function پیاده‌سازی شده؛ فعال‌سازی درگاه دیگر امن نیست.',true);return;}
+    final selectedGateway=row['payment_provider'].toString().trim().toLowerCase();
+    if(row['payment_enabled']==true && !{'nextpay','myket'}.contains(selectedGateway)){toast('درگاه پرداخت را از فهرست نکست‌پی یا مایکت انتخاب کنید.',true);return;}
     try{setState(()=>busy=true);await db.from('app_config').update(row).eq('id',true);await reload();toast('تنظیمات مرکزی ذخیره شد.');}
     catch(e){toast('ذخیره ناموفق: '+err(e),true);}finally{if(mounted)setState(()=>busy=false);}
   }
@@ -179,9 +180,19 @@ class _OwnerPanelScreenState extends State<OwnerPanelScreen> with SingleTickerPr
   Widget field(String k,String label,{int lines=1})=>Padding(padding:const EdgeInsets.only(bottom:10),child:TextField(controller:fields[k],maxLines:lines,decoration:InputDecoration(labelText:label,filled:true,fillColor:panel,border:const OutlineInputBorder())));
   Widget sw(String k,String label)=>SwitchListTile(value:toggles[k]??false,onChanged:(v)=>setState(()=>toggles[k]=v),title:Text(label),activeColor:purple,contentPadding:EdgeInsets.zero);
   Widget section(String title,List<Widget> children)=>Card(color:panel,child:Padding(padding:const EdgeInsets.all(14),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(title,style:const TextStyle(color:purple,fontWeight:FontWeight.bold)),const SizedBox(height:10),...children])));
+  Widget paymentProviderField()=>Padding(padding:const EdgeInsets.only(bottom:10),child:DropdownButtonFormField<String>(
+    value:['nextpay','myket'].contains(fields['payment_provider']?.text)?fields['payment_provider']!.text:'nextpay',
+    decoration:const InputDecoration(labelText:'درگاه پرداخت اشتراک',filled:true,fillColor:panel,border:OutlineInputBorder()),
+    dropdownColor:panel,
+    items:const [
+      DropdownMenuItem(value:'nextpay',child:Text('نکست‌پی (پرداخت بانکی)')),
+      DropdownMenuItem(value:'myket',child:Text('مایکت (پرداخت درون‌برنامه‌ای)')),
+    ],
+    onChanged:(v)=>setState(()=>fields['payment_provider']!.text=v??'nextpay'),
+  ));
   Widget settingsPage()=>ListView(padding:const EdgeInsets.all(14),children:[
     section('تنظیمات هوش مصنوعی',[field('app_name','نام برنامه'),field('default_model','مدل پیش‌فرض'),field('api_base_url','آدرس API'),field('system_prompt','دستورالعمل سیستم',lines:5),field('announcement','پیام اطلاع‌رسانی',lines:3),field('rubika_url','لینک روبیکا'),field('myket_url','لینک مایکت')]),
-    section('اشتراک و پرداخت',[field('pro_price','قیمت حرفه‌ای تومان'),field('pro_base_price','قیمت پایه'),field('pro_duration_days','مدت روز'),field('payment_provider','درگاه پرداخت'),sw('payment_enabled','فعال‌سازی پرداخت')]),
+    section('اشتراک و پرداخت',[field('pro_price','قیمت حرفه‌ای تومان'),field('pro_base_price','قیمت پایه'),field('pro_duration_days','مدت روز'),paymentProviderField(),sw('payment_enabled','فعال‌سازی پرداخت')]),
     section('سهمیه رایگان',[field('free_daily_message_limit','پیام روزانه'),field('free_daily_image_limit','تصویر روزانه'),field('free_daily_file_limit','فایل روزانه'),field('free_daily_video_limit','ویدئو روزانه'),field('free_voice_economic_minutes','دقیقه صدای اقتصادی'),field('free_voice_advanced_minutes','دقیقه صدای پیشرفته'),field('free_max_attachment_mb','حداکثر حجم فایل MB')]),
     section('سهمیه حرفه‌ای',[field('pro_daily_image_input_limit','ورودی تصویر'),field('pro_daily_file_input_limit','ورودی فایل'),field('pro_daily_image_generation_limit','تولید تصویر'),field('pro_daily_video_generation_limit','تولید ویدئو'),field('pro_max_attachment_mb','حداکثر حجم فایل MB')]),
     section('تبلیغات',[sw('ads_enabled','تبلیغات فعال'),field('ad_provider','شبکه تبلیغات'),sw('ad_banner_enabled','بنر فعال'),field('ad_banner_placement','محل بنر'),field('ad_banner_unit_id','شناسه بنر'),sw('ad_interstitial_enabled','تبلیغ بینابینی'),field('ad_interstitial_unit_id','شناسه بینابینی'),sw('ad_rewarded_enabled','تبلیغ جایزه‌ای'),field('ad_rewarded_unit_id','شناسه جایزه‌ای')]),
